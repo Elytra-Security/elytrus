@@ -1,0 +1,230 @@
+rules:
+  - id: ETR-PROVENANCE-001
+    version: "2026.01"
+    title: Release artifacts must have SHA256 checksums
+    family: ETR-PROVENANCE
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure all release artifacts have SHA256 checksum files for
+      downstream integrity verification.
+    risk_statement: >
+      Release artifacts without checksums cannot be verified as unmodified
+      by downstream consumers.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: SHA256 checksum file exists for each release artifact.
+    fail_condition: Release artifact without checksum file.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [release/checksums.txt]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure build provenance is captured for every release artifact.
+      steps:
+        - Use SLSA provenance generation in the CI pipeline (e.g. slsa-github-generator).
+        - Attach the provenance attestation to the GitHub release.
+      references:
+        - https://slsa.dev/
+
+  - id: ETR-PROVENANCE-002
+    version: "2026.01"
+    title: Release artifacts should be signed
+    family: ETR-PROVENANCE
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: warn
+    objective: >
+      Ensure release artifacts are cryptographically signed to establish
+      publisher authenticity.
+    risk_statement: >
+      Unsigned releases cannot be verified as originating from the expected
+      publisher, enabling distribution of tampered artifacts.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: [cosign]
+      secondary: []
+    pass_condition: Release artifact is signed with cosign or equivalent.
+    fail_condition: ""
+    warn_condition: Signing tool not available or artifact not signed.
+    evidence:
+      raw: []
+      normalized: [release/signature-summary.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Record the builder identity and build environment in the provenance.
+      steps:
+        - Confirm the provenance includes the runner OS, Go version, and builder ID.
+        - Use a hermetic build environment to prevent environment variable leakage.
+      references:
+        - https://slsa.dev/spec/v1.0/requirements
+
+  - id: ETR-PROVENANCE-003
+    version: "2026.01"
+    title: Release artifacts should include SBOM
+    family: ETR-PROVENANCE
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure release artifacts are accompanied by a Software Bill of Materials
+      for supply-chain transparency.
+    risk_statement: >
+      Releases without SBOM cannot be assessed for supply-chain risk
+      by consumers or incident responders.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: [syft]
+      secondary: []
+    pass_condition: SBOM present in release evidence bundle.
+    fail_condition: No SBOM in release artifacts.
+    warn_condition: SBOM generator unavailable.
+    evidence:
+      raw: []
+      normalized: [sbom/cyclonedx.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Sign the provenance attestation with a verifiable key.
+      steps:
+        - Use cosign or sigstore to sign the provenance document.
+        - Publish the signing certificate to a transparency log.
+      references:
+        - https://docs.sigstore.dev/cosign/overview/
+
+  - id: ETR-PROVENANCE-004
+    version: "2026.01"
+    title: Build provenance must identify commit, builder, and tool versions
+    family: ETR-PROVENANCE
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure release provenance records the commit hash, builder identity,
+      and all tool versions used to produce the artifact.
+    risk_statement: >
+      Incomplete build provenance prevents investigation of supply-chain
+      incidents and compromises auditability.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: release/provenance.json includes commit, builder, and tool versions.
+    fail_condition: Provenance record missing required fields.
+    warn_condition: Provenance file present but incomplete.
+    evidence:
+      raw: []
+      normalized: [release/provenance.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Include the source commit hash in the provenance so artifacts are traceable.
+      steps:
+        - Confirm the provenance includes the git commit SHA of the source.
+        - Tag the commit that produced the release artifact.
+      references:
+        - https://slsa.dev/spec/v1.0/requirements
+
+  - id: ETR-PROVENANCE-005
+    version: "2026.01"
+    title: Binary-only releases must include privacy and telemetry statement
+    family: ETR-PROVENANCE
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure binary-only releases include a statement describing data
+      collection, telemetry behavior, and privacy posture.
+    risk_statement: >
+      Binary releases without privacy statements may violate data protection
+      regulations or user trust expectations.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Release includes privacy and telemetry statement.
+    fail_condition: Binary release lacks privacy statement in release mode.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [release/release-summary.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.12]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Verify provenance attestations on downloaded artifacts before use.
+      steps:
+        - Use `cosign verify-attestation` or slsa-verifier to verify downloaded artifacts.
+        - Fail the CI pipeline if attestation verification fails.
+      references:
+        - https://slsa.dev/verification_summary

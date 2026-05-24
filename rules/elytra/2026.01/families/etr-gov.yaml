@@ -1,0 +1,233 @@
+rules:
+  - id: ETR-GOV-001
+    version: "2026.01"
+    title: Exceptions must have expiry dates
+    family: ETR-GOV
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure all exceptions specify an expiry date within the configured
+      maximum exception window.
+    risk_statement: >
+      Exceptions without expiry dates become permanent, preventing remediation
+      of the underlying issue.
+    applies_to:
+      stacks: [all]
+      files: ["exceptions/accepted-risks.json"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: All exceptions have expires_at within the configured maximum.
+    fail_condition: Exception with no expiry date or expiry exceeding maximum.
+    warn_condition: Exception approaching expiry threshold.
+    evidence:
+      raw: []
+      normalized: [exceptions/accepted-risks.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.5.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add an expires_at date to every exception entry.
+      steps:
+        - Edit each exception in .elytrus/exceptions/accepted-risks.json.
+        - Add an `expires_at` field in ISO 8601 format (e.g. 2026-12-31).
+        - Set the expiry to no more than 90 days in the future.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Risk_Assessment_Cheat_Sheet.html
+
+  - id: ETR-GOV-002
+    version: "2026.01"
+    title: Expired exceptions block strict gate
+    family: ETR-GOV
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure expired exception records cause gate failure in strict and
+      release modes.
+    risk_statement: >
+      Running with expired exceptions means risks are no longer governed
+      or compensated.
+    applies_to:
+      stacks: [all]
+      files: ["exceptions/accepted-risks.json"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: No exceptions with past expiry dates.
+    fail_condition: Active exception with past expiry date detected.
+    warn_condition: Expired exception detected in local mode.
+    evidence:
+      raw: []
+      normalized: [exceptions/accepted-risks.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.5.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Renew or close the expired exception before running in strict mode.
+      steps:
+        - Identify the expired exception in .elytrus/exceptions/accepted-risks.json.
+        - Either remediate the underlying finding and remove the exception.
+        - Or renew the exception with a new expiry date and updated justification.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Risk_Assessment_Cheat_Sheet.html
+
+  - id: ETR-GOV-003
+    version: "2026.01"
+    title: Suppressions require reason codes
+    family: ETR-GOV
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure suppressed or excepted findings include reason codes
+      for audit traceability.
+    risk_statement: >
+      Suppressions without reason codes cannot be reviewed or audited,
+      creating governance gaps.
+    applies_to:
+      stacks: [all]
+      files: ["exceptions/accepted-risks.json"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: All exception records include a non-empty reason field.
+    fail_condition: Exception record with empty or missing reason field detected.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [exceptions/accepted-risks.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.5.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a reason code to the suppression entry.
+      steps:
+        - Edit the suppression in .elytrus/exceptions/accepted-risks.json.
+        - Add a `reason` field explaining why this finding is suppressed.
+        - Reference a ticket or change request number where applicable.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Risk_Assessment_Cheat_Sheet.html
+
+  - id: ETR-GOV-004
+    version: "2026.01"
+    title: Policy hash must be captured
+    family: ETR-GOV
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure the SHA256 hash of the effective policy configuration is
+      captured in every evidence bundle.
+    risk_statement: >
+      Without a policy hash, auditors cannot verify that the intended policy
+      was applied to a specific run.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: metadata/policy-hash.txt is present and non-empty.
+    fail_condition: metadata/policy-hash.txt is missing or empty.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [metadata/policy-hash.txt]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure policy.json and policy-hash.txt are written to the evidence bundle.
+      steps:
+        - Confirm `bundle.WritePolicy(cfg)` is called in the gate flow.
+        - Check that .elytrus.yaml is readable and the hash is written to policy-hash.txt.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html
+
+  - id: ETR-GOV-005
+    version: "2026.01"
+    title: Key evidence artifacts should be hashed
+    family: ETR-GOV
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure key evidence artifacts are SHA256 hashed and recorded in
+      metadata/evidence-hashes.json for tamper detection.
+    risk_statement: >
+      Evidence artifacts that are not hashed can be modified after the run,
+      undermining the reliability of the assurance record.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: metadata/evidence-hashes.json exists and lists hashes for key artifacts.
+    fail_condition: metadata/evidence-hashes.json missing.
+    warn_condition: Some artifacts not hashed.
+    evidence:
+      raw: []
+      normalized: [metadata/evidence-hashes.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Run HashEvidence after all evidence artifacts are written to capture hashes.
+      steps:
+        - Confirm `integPack.HashEvidence()` is called after all packs complete.
+        - Check that evidence-hashes.json is present in the evidence bundle.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html

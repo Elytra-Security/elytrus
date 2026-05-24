@@ -1,0 +1,102 @@
+rules:
+  - id: ETR-EXCEPT-001
+    version: "2026.01"
+    title: Exceptions must be justified, approved, and time-bound
+    family: ETR-EXCEPT
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure all exception records include a justification, an approver
+      different from the requestor, and an expiry date.
+    risk_statement: >
+      Unjustified or perpetual exceptions undermine the assurance process
+      and create uncontrolled risk acceptance.
+    applies_to:
+      stacks: [all]
+      files: ["exceptions/accepted-risks.json"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: >
+      All exceptions have rule_id, reason, risk_owner, approver, approved_at,
+      expires_at, and compensating_control. Stable matching uses rule_id plus
+      optional file and line fields. finding_id is deprecated and ignored by
+      the policy engine.
+    fail_condition: Exception missing rule_id, reason, risk_owner, approver, approved_at, or compensating_control.
+    warn_condition: Exception near expiry.
+    evidence:
+      raw: []
+      normalized: [exceptions/accepted-risks.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.5.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a justification, approver, and expiry date to the exception entry.
+      steps:
+        - Edit the exception in .elytrus/exceptions/accepted-risks.json.
+        - Add reason, risk_owner, approver, and expires_at fields.
+        - Set expires_at to no more than 90 days in the future.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Risk_Assessment_Cheat_Sheet.html
+
+  - id: ETR-EXCEPT-002
+    version: "2026.01"
+    title: Critical findings require explicit risk acceptance
+    family: ETR-EXCEPT
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure critical findings have explicit risk acceptance with
+      a compensating control and independent approver.
+    risk_statement: >
+      Critical findings without explicit risk acceptance may be silently
+      bypassed, leaving serious vulnerabilities ungoverned.
+    applies_to:
+      stacks: [all]
+      files: ["exceptions/accepted-risks.json"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: >
+      Critical finding exceptions include compensating_control and approver
+      different from risk_owner.
+    fail_condition: >
+      Critical finding exception missing compensating_control or
+      approver equals risk_owner.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [exceptions/accepted-risks.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.5.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Obtain explicit risk acceptance for the critical finding before excepting it.
+      steps:
+        - Escalate the critical finding to the risk owner and security team.
+        - Document the compensating control that mitigates the risk.
+        - Add the exception entry only after written approval is obtained.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Risk_Assessment_Cheat_Sheet.html

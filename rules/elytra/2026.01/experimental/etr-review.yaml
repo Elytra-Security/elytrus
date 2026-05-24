@@ -1,0 +1,184 @@
+rules:
+  - id: ETR-REVIEW-001
+    version: "2026.01"
+    title: Security-sensitive changes require security review
+    family: ETR-REVIEW
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure changes to security-sensitive code paths have documented
+      security review evidence.
+    risk_statement: >
+      Security-sensitive code changes without review may introduce
+      vulnerabilities that go undetected.
+    applies_to:
+      stacks: [all]
+      files: ["**/auth/**", "**/crypto/**", "**/security/**", "**/policy/**"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Security-sensitive changes have evidence of security review.
+    fail_condition: ""
+    warn_condition: Security-sensitive change detected; review status unknown.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.25]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Require code review for all changes to security-sensitive packages.
+      steps:
+        - Add a CODEOWNERS rule that requires security team review for auth and crypto packages.
+        - Enable branch protection requiring at least one approving review.
+      references:
+        - https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+  - id: ETR-REVIEW-002
+    version: "2026.01"
+    title: Critical exceptions require independent approval
+    family: ETR-REVIEW
+    severity: critical
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure critical finding exceptions are approved by an independent
+      party distinct from the requestor and risk owner.
+    risk_statement: >
+      Self-approved critical exceptions provide no governance value and may
+      mask serious risks.
+    applies_to:
+      stacks: [all]
+      files: ["exceptions/accepted-risks.json"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Critical exceptions have approver different from risk_owner.
+    fail_condition: Critical exception with approver equal to risk_owner.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [exceptions/accepted-risks.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.5.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure all critical findings have a human review comment before exception.
+      steps:
+        - Add a PR comment explaining why the critical finding is acceptable.
+        - Get the comment approved by the security team before merging.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Risk_Assessment_Cheat_Sheet.html
+
+  - id: ETR-REVIEW-003
+    version: "2026.01"
+    title: The author cannot approve their own high-risk exception
+    family: ETR-REVIEW
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure the person requesting an exception for a high-risk finding
+      is not the same person approving it.
+    risk_statement: >
+      Self-approval of high-risk exceptions defeats the purpose of exception
+      governance and creates audit failures.
+    applies_to:
+      stacks: [all]
+      files: ["exceptions/accepted-risks.json"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Exception requestor and approver are different identities.
+    fail_condition: Same identity as requestor and approver on high-risk exception.
+    warn_condition: Identity comparison not possible from available fields.
+    evidence:
+      raw: []
+      normalized: [exceptions/accepted-risks.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.5.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a review gate for changes that introduce new external dependencies.
+      steps:
+        - Flag new dependency additions in the PR description for security review.
+        - Confirm the dependency has a compatible license and no known critical vulnerabilities.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html
+
+  - id: ETR-REVIEW-004
+    version: "2026.01"
+    title: High-risk path changes must be listed in review requirements
+    family: ETR-REVIEW
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure changes to high-risk code paths (auth, admin, billing) are
+      listed in a documented review requirement record.
+    risk_statement: >
+      High-risk path changes without review requirements may bypass the
+      change governance process.
+    applies_to:
+      stacks: [all]
+      files: ["**/auth/**", "**/admin/**", "**/billing/**"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: High-risk path change is included in review requirements.
+    fail_condition: ""
+    warn_condition: High-risk path change detected; review requirement status unclear.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.25]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a review gate for changes to infrastructure-as-code configurations.
+      steps:
+        - Require at least one infrastructure team reviewer for Terraform, Kubernetes, or Dockerfile changes.
+        - Add a CODEOWNERS rule covering infra/ and .github/workflows/ directories.
+      references:
+        - https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners

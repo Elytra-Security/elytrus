@@ -1,0 +1,144 @@
+rules:
+  - id: ETR-DEPS-001
+    version: "2026.01"
+    title: Dependencies must be traceable
+    family: ETR-DEPS
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure all dependencies are declared in a manifest file and can be
+      traced to specific versions.
+    risk_statement: >
+      Untraceable dependencies prevent vulnerability scanning and supply-chain
+      risk assessment.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["go.mod", "requirements.txt", "package.json", "pyproject.toml"]
+    tools:
+      primary: [go]
+      secondary: [npm]
+    technical_checks:
+      - go list -m all
+    pass_condition: All dependencies are declared with explicit versions.
+    fail_condition: Dependencies without version pinning detected.
+    warn_condition: Some indirect dependencies lack version pinning.
+    evidence:
+      raw: [raw/go-list.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.19, A.8.8]
+      cwe: []
+      owasp: [A06:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add dependency traceability by ensuring go.mod, go.sum, or equivalent lock files exist.
+      steps:
+        - For Go run `go mod init` if go.mod is missing then `go mod tidy`.
+        - Commit both go.mod and go.sum to the repository.
+        - For Node commit package-lock.json; for Python commit requirements.txt.
+      references:
+        - https://go.dev/ref/mod#go-mod-files
+
+  - id: ETR-DEPS-002
+    version: "2026.01"
+    title: Untrusted or local replace directives must be reviewed
+    family: ETR-DEPS
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect local replace directives in go.mod that point to filesystem paths
+      or unverified modules.
+    risk_statement: >
+      Local replace directives can introduce untrusted or tampered code into
+      the build, bypassing normal dependency verification.
+    applies_to:
+      stacks: [go]
+      files: ["go.mod"]
+    tools:
+      primary: [go]
+      secondary: []
+    pass_condition: No local replace directives pointing to filesystem paths.
+    fail_condition: go.mod contains replace directives with local filesystem paths.
+    warn_condition: Replace directives present; paths need manual review.
+    evidence:
+      raw: [raw/go-mod.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove or review untrusted local replace directives in go.mod.
+      steps:
+        - Review each `replace` directive in go.mod and confirm it is intentional.
+        - Replace local path overrides with versioned module references before release.
+        - Document any remaining replace directives with a comment explaining the reason.
+      references:
+        - https://go.dev/ref/mod#go-mod-replace
+
+  - id: ETR-DEPS-003
+    version: "2026.01"
+    title: Dependency lock files should be present where applicable
+    family: ETR-DEPS
+    severity: low
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure lock files (go.sum, package-lock.json, yarn.lock, poetry.lock)
+      are present and committed.
+    risk_statement: >
+      Missing lock files allow dependency versions to drift between installs,
+      creating reproducibility and security risks.
+    applies_to:
+      stacks: [go, node, python]
+      files: ["go.sum", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "poetry.lock"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Lock file is present and committed for detected package manager.
+    fail_condition: Package manifest exists without corresponding lock file.
+    warn_condition: Lock file present but not committed to version control.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Generate and commit the dependency lock file.
+      steps:
+        - For Go run `go mod tidy` to generate go.sum.
+        - For Node run `npm install` to generate package-lock.json.
+        - For Python run `pip freeze > requirements.txt` or use pip-tools.
+        - Commit the lock file to the repository.
+      references:
+        - https://go.dev/ref/mod#go-sum-files

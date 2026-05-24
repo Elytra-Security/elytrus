@@ -1,0 +1,24 @@
+name: Validate Rules
+
+on:
+  pull_request:
+    paths:
+      - 'rules/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Elytrus
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/Elytra-Security/elytrus/main/install.sh | sh
+
+      - name: Validate contributed rules
+        run: |
+          elytrus rules validate --rules rules/contributed/
+
+      - name: Validate elytra rules
+        run: |
+          elytrus rules validate --rules rules/elytra/

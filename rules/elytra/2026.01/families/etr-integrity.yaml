@@ -1,0 +1,277 @@
+rules:
+  - id: ETR-INTEGRITY-001
+    version: "2026.01"
+    title: Effective rules pack must be hashed
+    family: ETR-INTEGRITY
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: pass
+      strict: fail
+      release: fail
+    objective: >
+      Ensure the effective rules pack is hashed and the hash recorded in
+      evidence so rule tampering can be detected.
+    risk_statement: >
+      Without a hash of the rules pack, attackers could silently modify rules
+      to suppress findings.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: metadata/rule-pack-hash.txt is written and non-empty.
+    fail_condition: metadata/rule-pack-hash.txt is missing or empty.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [metadata/rule-pack-hash.txt]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure the effective rules pack is hashed at the start of each run.
+      steps:
+        - Confirm `rs.WriteToEvidence(bundle)` is called after rules load.
+        - Check that rule-pack-hash.txt is present in the evidence bundle.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html
+
+  - id: ETR-INTEGRITY-002
+    version: "2026.01"
+    title: Key evidence artifacts should be hashed
+    family: ETR-INTEGRITY
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure key evidence artifacts (findings.json, attestation.json,
+      summary.json) are hashed for tamper detection.
+    risk_statement: >
+      Unhashed evidence artifacts could be modified after the fact, undermining
+      the integrity of the assurance record.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: metadata/evidence-hashes.json lists hashes for all key artifacts.
+    fail_condition: metadata/evidence-hashes.json is missing.
+    warn_condition: Some artifacts missing from hash record.
+    evidence:
+      raw: []
+      normalized: [metadata/evidence-hashes.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Run HashEvidence after all evidence artifacts are written.
+      steps:
+        - Confirm `integPack.HashEvidence()` is called after all packs complete.
+        - Check that evidence-hashes.json is present in the evidence bundle.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html
+
+  - id: ETR-INTEGRITY-003
+    version: "2026.01"
+    title: Release artifacts must include SHA256 checksums
+    family: ETR-INTEGRITY
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure release artifacts are accompanied by SHA256 checksums for
+      downstream integrity verification.
+    risk_statement: >
+      Release artifacts without checksums cannot be verified by consumers,
+      enabling distribution of tampered binaries.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Checksum files exist for all release artifacts.
+    fail_condition: Release artifacts lack corresponding checksum files.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [release/checksums.txt]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Generate SHA256 checksums for all release artifacts.
+      steps:
+        - Run `sha256sum dist/*` and save the output to checksums.txt.
+        - Commit checksums.txt alongside the release artifacts.
+        - Verify checksums in your release pipeline before publishing.
+      references:
+        - https://pkg.go.dev/crypto/sha256
+
+  - id: ETR-INTEGRITY-004
+    version: "2026.01"
+    title: Public binaries should include signature metadata where available
+    family: ETR-INTEGRITY
+    severity: low
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: warn
+    objective: >
+      Ensure public binary releases include code signing metadata or cosign
+      signatures where available.
+    risk_statement: >
+      Unsigned binaries cannot be verified as originating from the expected
+      publisher.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: [cosign]
+      secondary: []
+    pass_condition: Binary includes signature or signing metadata.
+    fail_condition: ""
+    warn_condition: cosign not available or binary not signed.
+    evidence:
+      raw: []
+      normalized: [release/signature-summary.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add signature metadata to the public binary release.
+      steps:
+        - Sign the binary with cosign or GPG and include the signature in the release.
+        - Document the signing key in SECURITY.md so users can verify downloads.
+      references:
+        - https://docs.sigstore.dev/cosign/overview/
+
+  - id: ETR-INTEGRITY-005
+    version: "2026.01"
+    title: Binary release must include SBOM where available
+    family: ETR-INTEGRITY
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure binary releases include a Software Bill of Materials for
+      supply chain transparency.
+    risk_statement: >
+      Binary releases without SBOMs prevent consumers from assessing
+      supply-chain risk in the distributed software.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: [syft]
+      secondary: []
+    pass_condition: Release includes sbom/cyclonedx.json.
+    fail_condition: Release artifact lacks SBOM in release mode.
+    warn_condition: SBOM generator not available.
+    evidence:
+      raw: []
+      normalized: [sbom/cyclonedx.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Include an SBOM in the binary release.
+      steps:
+        - Generate an SBOM with `syft . -o spdx-json > sbom.spdx.json`.
+        - Attach the SBOM to the GitHub release or include it in the artifact bundle.
+      references:
+        - https://anchore.com/sbom/
+
+  - id: ETR-INTEGRITY-006
+    version: "2026.01"
+    title: Attestation must include Elytrus binary version and rules pack hash
+    family: ETR-INTEGRITY
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: pass
+      strict: fail
+      release: fail
+    objective: >
+      Ensure the attestation records the Elytrus binary version and rules
+      pack hash to establish assurance provenance.
+    risk_statement: >
+      Attestations without version and rules hash cannot be verified as
+      produced by a known, unmodified assurance engine.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: attestation.json includes elytrus_version and rules_pack_hash.
+    fail_condition: attestation.json missing version or rules pack hash.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [attestation.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Include the Elytrus binary version and rules pack hash in the attestation.
+      steps:
+        - Confirm the attestation includes `elytrus_version` and `rules_pack_hash` fields.
+        - Check that both values are non-empty in attestation.json.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html

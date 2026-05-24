@@ -1,0 +1,279 @@
+rules:
+  - id: ETR-RELEASE-001
+    version: "2026.01"
+    title: Release artifact must have checksum
+    family: ETR-RELEASE
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure release artifacts include SHA256 checksums for integrity
+      verification by downstream consumers.
+    risk_statement: >
+      Release artifacts without checksums cannot be verified by consumers,
+      enabling distribution of tampered binaries.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: SHA256 checksum file exists for each release artifact.
+    fail_condition: Release artifact missing checksum file.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [release/checksums.txt]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Generate SHA256 checksums for all release artifacts.
+      steps:
+        - Run `sha256sum dist/*` and save the output to checksums.txt.
+        - Include checksums.txt in the release bundle.
+        - Verify checksums in your release pipeline before publishing.
+      references:
+        - https://pkg.go.dev/crypto/sha256
+
+  - id: ETR-RELEASE-002
+    version: "2026.01"
+    title: Release must include SBOM
+    family: ETR-RELEASE
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure each release includes a CycloneDX SBOM documenting software
+      composition.
+    risk_statement: >
+      Releases without SBOMs cannot be assessed for supply-chain risk by
+      consumers or security teams.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: [syft]
+      secondary: []
+    pass_condition: sbom/cyclonedx.json is present in the evidence bundle.
+    fail_condition: SBOM missing from release evidence.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [sbom/cyclonedx.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Generate and include an SBOM in the release.
+      steps:
+        - Generate an SBOM with `syft . -o spdx-json > sbom.spdx.json`.
+        - Attach the SBOM to the GitHub release or include it in the artifact bundle.
+        - Confirm the SBOM lists all direct and transitive dependencies.
+      references:
+        - https://anchore.com/sbom/
+
+  - id: ETR-RELEASE-003
+    version: "2026.01"
+    title: Release must not contain expired exceptions
+    family: ETR-RELEASE
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure no expired exceptions are active at release time.
+    risk_statement: >
+      Releasing with expired exceptions means accepted risks are no longer
+      being governed, potentially shipping known vulnerabilities.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: No exceptions with past expiry dates are active.
+    fail_condition: One or more expired exceptions detected at release time.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [exceptions/accepted-risks.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.5.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Renew or remove expired exceptions before releasing.
+      steps:
+        - Run `elytrus gate --release` to identify expired exceptions.
+        - Either remediate the underlying finding and remove the exception.
+        - Or renew the exception with a new expiry date and updated justification.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Risk_Assessment_Cheat_Sheet.html
+
+  - id: ETR-RELEASE-004
+    version: "2026.01"
+    title: Release attestation must be generated
+    family: ETR-RELEASE
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure a complete attestation.json is generated for every release run.
+    risk_statement: >
+      Missing attestation means the release has no verifiable record of
+      assurance checks performed.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: attestation.json is present and complete.
+    fail_condition: attestation.json is missing or incomplete.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [attestation.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure attestation.json is generated before the release is published.
+      steps:
+        - Run `elytrus gate --release` to generate attestation.json.
+        - Include attestation.json in the release artifact bundle.
+        - Verify the attestation result is `pass` before publishing.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html
+
+  - id: ETR-RELEASE-005
+    version: "2026.01"
+    title: Release notes should exist for release mode
+    family: ETR-RELEASE
+    severity: low
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure release notes exist documenting changes in the release.
+    risk_statement: >
+      Releases without notes prevent consumers from understanding changes
+      and assessing their impact.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Release notes file (CHANGELOG.md, RELEASE_NOTES.md) is present.
+    fail_condition: No release notes file found in release mode.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [release/release-summary.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add release notes describing changes in this version.
+      steps:
+        - Create CHANGELOG.md or update it with changes in this release.
+        - Include breaking changes, new features, and bug fixes.
+        - Link the release notes from the GitHub release description.
+      references:
+        - https://keepachangelog.com/
+
+  - id: ETR-RELEASE-006
+    version: "2026.01"
+    title: Release must not proceed with unapproved critical or high findings
+    family: ETR-RELEASE
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Block release when critical or high findings exist without valid,
+      active exception records.
+    risk_statement: >
+      Releasing software with unapproved critical or high findings ships
+      known vulnerabilities to users.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: No critical or high findings without active exceptions.
+    fail_condition: Critical or high findings without exceptions detected at release.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [findings.json, exceptions/accepted-risks.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.8.8, A.8.25]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remediate or formally except all critical and high findings before releasing.
+      steps:
+        - Run `elytrus gate --release` to identify unapproved findings.
+        - Fix each critical and high finding or obtain formal exception approval.
+        - Re-run the gate until it exits 0 before publishing the release.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Risk_Assessment_Cheat_Sheet.html

@@ -1,0 +1,234 @@
+rules:
+  - id: ETR-DOCS-001
+    version: "2026.01"
+    title: Repository must include README
+    family: ETR-DOCS
+    severity: low
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure the repository includes a README file documenting the project.
+    risk_statement: >
+      Missing README makes it difficult for engineers and security reviewers
+      to understand the purpose, deployment, and usage of the software.
+    applies_to:
+      stacks: [all]
+      files: ["README.md", "README.txt", "README"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: README.md or README exists in repository root.
+    fail_condition: No README file found.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Create a README.md at the repository root describing the project.
+      steps:
+        - Create README.md with project name, purpose, and quick-start instructions.
+        - Include build and test instructions so contributors can get started quickly.
+        - Link to SECURITY.md and CONTRIBUTING.md if they exist.
+      references:
+        - https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes
+
+  - id: ETR-DOCS-002
+    version: "2026.01"
+    title: Security-sensitive repositories must include SECURITY.md
+    family: ETR-DOCS
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure security-sensitive repositories include a SECURITY.md file
+      documenting security policies and responsible disclosure.
+    risk_statement: >
+      Missing SECURITY.md means researchers and users have no documented
+      path for responsible vulnerability disclosure.
+    applies_to:
+      stacks: [all]
+      files: ["SECURITY.md"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: SECURITY.md exists in repository root.
+    fail_condition: SECURITY.md absent from security-sensitive repository.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.6.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a SECURITY.md vulnerability disclosure policy to the repository.
+      steps:
+        - Create SECURITY.md at the repository root.
+        - Include supported versions, how to report, response timeline, and contact.
+        - Reference the GitHub security advisory template if applicable.
+      references:
+        - https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository
+
+  - id: ETR-DOCS-003
+    version: "2026.01"
+    title: Environment variables should be documented
+    family: ETR-DOCS
+    severity: low
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: warn
+    objective: >
+      Ensure all environment variables used by the application are documented
+      in a .env.example or configuration documentation file.
+    risk_statement: >
+      Undocumented environment variables can result in misconfigured
+      deployments, security misconfigurations, or missing credentials.
+    applies_to:
+      stacks: [all]
+      files: [".env.example", "docs/**/*.md"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: .env.example or equivalent documentation exists.
+    fail_condition: ""
+    warn_condition: No .env.example found; documentation status unclear.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add documentation for all environment variables used by the project.
+      steps:
+        - Create or update a .env.example file listing all required environment variables.
+        - Document each variable's purpose, allowed values, and default in README or docs/.
+        - Confirm no real secret values appear in the example file.
+      references:
+        - https://12factor.net/config
+
+  - id: ETR-DOCS-004
+    version: "2026.01"
+    title: Production deployment assumptions should be documented
+    family: ETR-DOCS
+    severity: low
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure production deployment assumptions (network, auth, storage)
+      are documented for operators.
+    risk_statement: >
+      Undocumented deployment assumptions lead to insecure default deployments
+      in production.
+    applies_to:
+      stacks: [all]
+      files: ["docs/**/*.md", "DEPLOYMENT.md", "RUNBOOK.md"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Deployment documentation exists with production assumptions.
+    fail_condition: ""
+    warn_condition: No deployment documentation found.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Document production deployment assumptions and infrastructure requirements.
+      steps:
+        - Create or update docs/DEPLOYMENT.md with infrastructure prerequisites.
+        - Document required environment variables, network access, and health check endpoints.
+        - Include rollback procedures and known deployment gotchas.
+      references:
+        - https://12factor.net/
+
+  - id: ETR-DOCS-005
+    version: "2026.01"
+    title: Public binary releases must include license and privacy documentation
+    family: ETR-DOCS
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure public binary releases include a LICENSE file and a privacy
+      or telemetry statement.
+    risk_statement: >
+      Binary releases without license documentation create legal uncertainty
+      for users.
+    applies_to:
+      stacks: [all]
+      files: ["LICENSE", "LICENSE.md", "LICENSE.txt"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: LICENSE file exists in repository root.
+    fail_condition: No LICENSE file found in release mode.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add LICENSE-BINARY.md and PRIVACY.md for public binary releases.
+      steps:
+        - Create LICENSE-BINARY.md describing the terms for binary distribution.
+        - Create PRIVACY.md documenting what data the binary collects and transmits.
+        - Include both files in the release artifact bundle.
+      references:
+        - https://opensource.org/licenses

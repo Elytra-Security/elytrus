@@ -1,0 +1,94 @@
+rules:
+  - id: ETR-DATA-001
+    version: "2026.01"
+    title: Sensitive data must not be exposed in client code
+    family: ETR-DATA
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure sensitive data fields (tokens, secrets, internal IDs) are not
+      included in client-side JavaScript bundles or frontend responses.
+    risk_statement: >
+      Sensitive data in client-side code or responses is accessible to all
+      users with browser access, enabling data theft.
+    applies_to:
+      stacks: [node, react]
+      files: ["**/*.{js,ts,jsx,tsx}"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: No sensitive fields exposed in client-side code or frontend responses.
+    fail_condition: Sensitive field detected in client bundle or frontend response.
+    warn_condition: Field exposure context unclear; manual review recommended.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.11]
+      cwe: [CWE-312]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Move sensitive data handling to the server side or use httpOnly cookies.
+      steps:
+        - Replace localStorage.getItem('token') with httpOnly cookie authentication.
+        - Configure the server to set tokens as Secure; HttpOnly; SameSite=Strict cookies.
+        - Remove all localStorage.setItem/getItem calls for tokens and session data.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
+
+  - id: ETR-DATA-002
+    version: "2026.01"
+    title: Personal or sensitive data must be masked where required
+    family: ETR-DATA
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure personal or sensitive data is masked, truncated, or redacted
+      in contexts where full exposure is not necessary.
+    risk_statement: >
+      Unmasked sensitive data in non-production contexts, reports, or logs
+      creates unnecessary exposure risk.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Sensitive data in display or report contexts is masked.
+    fail_condition: Unmasked sensitive data in report or display context detected.
+    warn_condition: Sensitive field in output context; masking status unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.11, A.5.12]
+      cwe: [CWE-312]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add masking or exclusion for sensitive fields in HTTP handler responses.
+      steps:
+        - Add `json:"-"` to struct fields that must not be serialised in responses.
+        - Or apply an explicit field allow-list in the handler before writing the response.
+        - Review all handler response structs for unmasked sensitive fields.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html

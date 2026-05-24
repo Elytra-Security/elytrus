@@ -1,0 +1,229 @@
+rules:
+  - id: ETR-THREAT-001
+    version: "2026.01"
+    title: Security-sensitive repositories should include a threat model
+    family: ETR-THREAT
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure security-sensitive repositories include a threat model document
+      identifying threats, assets, and mitigations.
+    risk_statement: >
+      Without a threat model, security controls may miss critical attack
+      vectors specific to the system.
+    applies_to:
+      stacks: [all]
+      files: ["THREAT_MODEL.md", "threat-model.md", "docs/threat-model.md", "threat-model.yaml"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Threat model file exists in repository.
+    fail_condition: ""
+    warn_condition: No threat model found in security-sensitive repository.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Conduct a threat model for the feature before completing implementation.
+      steps:
+        - Use STRIDE or PASTA to identify threats against the new feature.
+        - Document mitigations for each identified threat in the design document.
+      references:
+        - https://owasp.org/www-community/Threat_Modeling
+
+  - id: ETR-THREAT-002
+    version: "2026.01"
+    title: New external entrypoints must be listed in the threat model
+    family: ETR-THREAT
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure new external entrypoints (API routes, webhooks, event consumers)
+      are documented in the threat model.
+    risk_statement: >
+      External entrypoints not in the threat model have no documented threat
+      analysis, creating ungoverned attack surface.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: New external entrypoints are listed in threat model.
+    fail_condition: ""
+    warn_condition: New entrypoint detected; threat model coverage unclear.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Document trust boundaries in the architecture so data flows are clear.
+      steps:
+        - Draw a data flow diagram showing all trust boundaries and data stores.
+        - Identify where authentication and authorisation checks occur at each boundary.
+      references:
+        - https://owasp.org/www-community/Threat_Modeling
+
+  - id: ETR-THREAT-003
+    version: "2026.01"
+    title: New sensitive data stores must include mitigations
+    family: ETR-THREAT
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure new sensitive data stores are accompanied by documented
+      mitigations in the threat model.
+    risk_statement: >
+      Data stores without documented mitigations may lack encryption,
+      access controls, or audit logging.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: New sensitive data stores have mitigations in threat model.
+    fail_condition: ""
+    warn_condition: New data store detected; mitigations status unclear.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Address the highest-risk threats identified in the threat model.
+      steps:
+        - Prioritise threats by likelihood and impact using a risk matrix.
+        - Implement mitigations for all high-risk threats before release.
+      references:
+        - https://owasp.org/www-community/Threat_Modeling_Process
+
+  - id: ETR-THREAT-004
+    version: "2026.01"
+    title: Threat model must have owner and review date
+    family: ETR-THREAT
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure the threat model document includes an owner and a review date.
+    risk_statement: >
+      Threat models without owners and review dates become stale and
+      no longer reflect the current threat landscape.
+    applies_to:
+      stacks: [all]
+      files: ["THREAT_MODEL.md", "threat-model.md", "threat-model.yaml"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Threat model includes owner and last review date.
+    fail_condition: Threat model missing owner or review date.
+    warn_condition: Threat model present but metadata incomplete.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Review and update the threat model when significant changes are made.
+      steps:
+        - Re-run the threat model whenever new data flows, endpoints, or integrations are added.
+        - Update the threat model document and get it re-reviewed.
+      references:
+        - https://owasp.org/www-community/Threat_Modeling
+
+  - id: ETR-THREAT-005
+    version: "2026.01"
+    title: Security-sensitive changes should trigger threat model review
+    family: ETR-THREAT
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: warn
+    objective: >
+      Ensure security-sensitive changes include a flag for threat model
+      review or evidence that the threat model was reviewed.
+    risk_statement: >
+      Security changes without threat model review may invalidate existing
+      mitigations or introduce new unmodeled threats.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Security-sensitive change includes threat model review note.
+    fail_condition: ""
+    warn_condition: Security-sensitive change without threat model review indicator.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure all threat model mitigations have corresponding test coverage.
+      steps:
+        - For each documented mitigation write a test that verifies it works.
+        - Include the tests in the CI pipeline so regressions are caught automatically.
+      references:
+        - https://owasp.org/www-community/Threat_Modeling

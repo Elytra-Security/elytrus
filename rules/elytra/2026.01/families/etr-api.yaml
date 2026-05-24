@@ -1,0 +1,282 @@
+rules:
+  - id: ETR-API-001
+    version: "2026.01"
+    title: Protected API endpoints must declare authentication
+    family: ETR-API
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure all protected API endpoints declare authentication requirements
+      in the API contract and implementation.
+    risk_statement: >
+      Endpoints without declared authentication may be accessed without
+      credentials, enabling unauthorized data access.
+    applies_to:
+      stacks: [all]
+      files: ["openapi.yaml", "openapi.yml", "swagger.yaml", "swagger.json"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: All protected endpoints declare security schemes.
+    fail_condition: Protected endpoint without authentication declaration detected.
+    warn_condition: Endpoint protection status cannot be confirmed.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3, A.9.4]
+      cwe: [CWE-284, CWE-306]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a security declaration to each protected API endpoint in the OpenAPI contract.
+      steps:
+        - For each protected path add a `security:` field referencing the appropriate security scheme.
+        - Define the security scheme under `components/securitySchemes` in the contract.
+        - Verify the implementation enforces the declared scheme.
+      references:
+        - https://swagger.io/docs/specification/authentication/
+
+  - id: ETR-API-002
+    version: "2026.01"
+    title: API responses must not expose sensitive fields by default
+    family: ETR-API
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure API response schemas do not expose sensitive fields
+      (passwords, tokens, internal IDs) unless explicitly allowed.
+    risk_statement: >
+      Over-exposed API responses leak sensitive data to clients,
+      enabling account takeover or data exfiltration.
+    applies_to:
+      stacks: [all]
+      files: ["openapi.yaml", "openapi.yml", "swagger.yaml", "swagger.json"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Response schemas exclude sensitive fields or mark them writeOnly.
+    fail_condition: Sensitive field (password, token, secret) in response schema.
+    warn_condition: Field sensitivity in response schema unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3]
+      cwe: [CWE-312]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Exclude or mask sensitive fields from API response schemas.
+      steps:
+        - Remove sensitive fields (password, secret, token, ssn) from the response schema.
+        - Use a separate response DTO that omits fields not intended for callers.
+        - Review all response schemas for unintentional personal data exposure.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html
+
+  - id: ETR-API-003
+    version: "2026.01"
+    title: Error responses must not expose stack traces or internals
+    family: ETR-API
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect error handlers that return stack traces, internal error messages,
+      or debug information to API clients.
+    risk_statement: >
+      Stack traces and internal errors in API responses reveal implementation
+      details useful for targeted attacks.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/handler/**", "**/middleware/**", "**/error/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Error responses return generic messages without stack traces.
+    fail_condition: Stack trace or internal error detail returned in API response.
+    warn_condition: Error serialization detected; detail level unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: [CWE-209]
+      owasp: [A05:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove internal details from error responses to prevent information disclosure.
+      steps:
+        - Replace stack traces and SQL errors with a generic error message in responses.
+        - Log the full error server-side and return only a correlation ID to the client.
+        - Add tests that assert error responses contain no stack trace or SQL content.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html
+
+  - id: ETR-API-004
+    version: "2026.01"
+    title: File upload endpoints must define type and size controls
+    family: ETR-API
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure file upload endpoints enforce file type restrictions and
+      maximum file size limits.
+    risk_statement: >
+      Unrestricted file uploads enable malicious file uploads, denial of
+      service via large files, or stored XSS via crafted filenames.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/upload/**", "**/handler/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: File upload endpoints validate content type and enforce size limits.
+    fail_condition: File upload endpoint without type or size validation detected.
+    warn_condition: Upload endpoint detected; validation completeness unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: [CWE-434]
+      owasp: [A04:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add file type and size controls to the file upload endpoint.
+      steps:
+        - Declare allowed MIME types and a maximum file size in the request schema.
+        - Enforce the limits server-side; do not rely on client-side validation alone.
+        - Reject uploads that exceed limits with a 413 or 422 response.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
+
+  - id: ETR-API-005
+    version: "2026.01"
+    title: Data export endpoints must require authorization
+    family: ETR-API
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure data export endpoints require explicit authorization checks
+      before returning bulk data.
+    risk_statement: >
+      Unauthorized data exports enable bulk exfiltration of sensitive data
+      from the application.
+    applies_to:
+      stacks: [all]
+      files: ["**/export/**", "**/download/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Export endpoints include explicit authorization checks.
+    fail_condition: Export endpoint without authorization detected.
+    warn_condition: Export endpoint detected; authorization pattern unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add an authorisation requirement to the data export or download endpoint.
+      steps:
+        - Add a `security:` field to the endpoint in the OpenAPI contract.
+        - Enforce an authorisation check in the handler before returning the export data.
+        - Write a test that confirms unauthenticated requests receive a 401 response.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
+
+  - id: ETR-API-006
+    version: "2026.01"
+    title: Admin endpoints must be clearly separated and protected
+    family: ETR-API
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure admin endpoints are on a separate route prefix and require
+      elevated authentication and authorization.
+    risk_statement: >
+      Admin endpoints without separation and protection can be accessed
+      by regular users, enabling privilege escalation.
+    applies_to:
+      stacks: [all]
+      files: ["**/admin/**", "**/handler/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Admin endpoints require elevated role or admin-specific auth.
+    fail_condition: Admin endpoint without role or admin auth check detected.
+    warn_condition: Admin route detected; access control level unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3, A.9.4]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Separate admin endpoints under a distinct path prefix with stronger protection.
+      steps:
+        - Move admin endpoints to a dedicated path prefix such as /admin/ or /management/.
+        - Apply a separate security scheme or IP allowlist to the admin prefix.
+        - Confirm the protection is enforced at the router or middleware level.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html

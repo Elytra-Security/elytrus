@@ -1,0 +1,98 @@
+rules:
+  - id: ETR-STACK-001
+    version: "2026.01"
+    title: Full stack must be scanned, not only source code
+    family: ETR-STACK
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure all detected stack artifacts (Dockerfiles, Kubernetes manifests,
+      Terraform files, CI workflows) are covered by applicable checks.
+    risk_statement: >
+      Scanning only source code while ignoring infrastructure configurations
+      leaves a significant attack surface unreviewed.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: [trivy]
+      secondary: [semgrep]
+    pass_condition: >
+      All detected artifact types have a corresponding check that ran
+      successfully.
+    fail_condition: >
+      Detected Dockerfile, K8s manifest, Terraform, or CI workflow had no
+      corresponding check run (typically due to missing tool).
+    warn_condition: Partial stack coverage; some checks skipped.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.8.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure all stack components are included in the scan scope.
+      steps:
+        - Confirm that go.mod, package.json, and requirements.txt are at the scan root.
+        - Check that Docker images and CI/CD pipelines are included in the scan.
+        - Re-run `elytrus gate` and verify all expected packs show as applicable.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html
+
+  - id: ETR-STACK-002
+    version: "2026.01"
+    title: Shell scripts must not use dangerous patterns
+    family: ETR-STACK
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect dangerous patterns in shell scripts and Makefiles such as
+      eval with user input, curl-pipe-bash, and unquoted variables.
+    risk_statement: >
+      Dangerous shell script patterns can be exploited if scripts are triggered
+      with attacker-controlled input or in compromised environments.
+    applies_to:
+      stacks: [all]
+      files: ["**/*.sh", "**/Makefile", "**/makefile"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: No dangerous patterns detected in shell scripts.
+    fail_condition: Dangerous patterns (eval, curl|bash) detected in shell scripts.
+    warn_condition: Potentially risky patterns detected; manual review recommended.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.28]
+      cwe: [CWE-78]
+      owasp: [A03:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Replace dangerous shell patterns with safe equivalents.
+      steps:
+        - Replace `eval` with explicit command calls.
+        - Replace command substitution in unsafe contexts with validated inputs.
+        - Add shellcheck to your CI pipeline to catch dangerous patterns automatically.
+      references:
+        - https://www.shellcheck.net/

@@ -1,0 +1,276 @@
+rules:
+  - id: ETR-RESILIENCE-001
+    version: "2026.01"
+    title: HTTP clients must define timeouts
+    family: ETR-RESILIENCE
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure all HTTP client configurations define connection and request
+      timeouts.
+    risk_statement: >
+      HTTP clients without timeouts can block goroutines or threads
+      indefinitely, enabling denial of service via slow upstream responses.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [semgrep]
+      secondary: [gosec]
+    pass_condition: HTTP clients have explicit timeout configuration.
+    fail_condition: HTTP client created without timeout detected.
+    warn_condition: HTTP client detected; timeout configuration unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: [CWE-400]
+      owasp: [A04:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add timeout and retry logic to all outbound service calls.
+      steps:
+        - Set explicit timeouts on all HTTP clients and database connections.
+        - Add retry logic with exponential backoff for transient failures.
+      references:
+        - https://pkg.go.dev/net/http#Client
+
+  - id: ETR-RESILIENCE-002
+    version: "2026.01"
+    title: External calls should use context cancellation
+    family: ETR-RESILIENCE
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure external service calls propagate context for cancellation
+      and deadline propagation.
+    risk_statement: >
+      External calls without context propagation cannot be cancelled when
+      the calling request is cancelled, causing resource leaks.
+    applies_to:
+      stacks: [go]
+      files: ["**/*.go"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: External calls accept and propagate context.Context.
+    fail_condition: External call without context propagation detected.
+    warn_condition: Context usage pattern unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: [CWE-400]
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a circuit breaker to downstream dependencies to prevent cascade failures.
+      steps:
+        - Implement a circuit breaker pattern using a library such as gobreaker.
+        - Configure failure thresholds and half-open probing intervals.
+      references:
+        - https://martinfowler.com/bliki/CircuitBreaker.html
+
+  - id: ETR-RESILIENCE-003
+    version: "2026.01"
+    title: File uploads must define maximum size
+    family: ETR-RESILIENCE
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure file upload handlers define maximum accepted file sizes to
+      prevent denial of service.
+    risk_statement: >
+      File uploads without size limits can exhaust disk space or memory,
+      enabling denial of service.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/upload/**", "**/handler/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: File upload handlers define maximum file size.
+    fail_condition: File upload handler without size limit detected.
+    warn_condition: Upload handler detected; size limit configuration unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: [CWE-400]
+      owasp: [A04:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add rate limiting to protect the service from excessive request load.
+      steps:
+        - Implement a token bucket or leaky bucket rate limiter at the HTTP handler level.
+        - Return HTTP 429 when the rate limit is exceeded.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html
+
+  - id: ETR-RESILIENCE-004
+    version: "2026.01"
+    title: Sensitive endpoints should define rate limiting
+    family: ETR-RESILIENCE
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure sensitive endpoints (auth, password reset, signup) define
+      rate limiting to prevent brute force attacks.
+    risk_statement: >
+      Endpoints without rate limiting enable brute force credential attacks
+      and account enumeration.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/auth/**", "**/handler/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Sensitive endpoints include rate limit middleware.
+    fail_condition: ""
+    warn_condition: Auth endpoint detected without rate limit middleware.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: [CWE-307]
+      owasp: [A04:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add graceful shutdown handling so in-flight requests complete before exit.
+      steps:
+        - Handle SIGTERM and SIGINT with a shutdown context and drain period.
+        - Use http.Server.Shutdown to drain in-flight HTTP requests gracefully.
+      references:
+        - https://pkg.go.dev/net/http#Server.Shutdown
+
+  - id: ETR-RESILIENCE-005
+    version: "2026.01"
+    title: Retry loops must define backoff and maximum attempts
+    family: ETR-RESILIENCE
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure retry loops define a maximum number of attempts and backoff
+      delay to prevent infinite retry storms.
+    risk_statement: >
+      Unbounded retry loops can overwhelm downstream services, causing
+      cascading failures and denial of service.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Retry loops define maximum attempts and backoff.
+    fail_condition: Retry loop without maximum attempts or backoff detected.
+    warn_condition: Retry pattern detected; bounds configuration unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: []
+      cwe: [CWE-400]
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a readiness probe so the service only receives traffic when ready.
+      steps:
+        - Add a /readyz endpoint that returns 200 only when the service is fully initialised.
+        - Configure Kubernetes readiness probe to use this endpoint.
+      references:
+        - https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+
+  - id: ETR-RESILIENCE-006
+    version: "2026.01"
+    title: Long-running jobs should include cancellation or timeout behavior
+    family: ETR-RESILIENCE
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure long-running background jobs or worker processes implement
+      cancellation signals or timeouts.
+    risk_statement: >
+      Jobs without cancellation or timeout cannot be gracefully terminated,
+      causing resource exhaustion on restart or shutdown.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/worker/**", "**/job/**", "**/task/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Long-running jobs respond to context cancellation or define timeout.
+    fail_condition: Long-running job without cancellation or timeout detected.
+    warn_condition: Background job detected; cancellation mechanism unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: [CWE-400]
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add bulkhead isolation so one overloaded subsystem cannot exhaust shared resources.
+      steps:
+        - Use separate goroutine pools or worker queues for independent subsystems.
+        - Set maximum concurrency limits per subsystem to prevent resource exhaustion.
+      references:
+        - https://docs.microsoft.com/en-us/azure/architecture/patterns/bulkhead

@@ -1,0 +1,146 @@
+rules:
+  - id: ETR-VULN-001
+    version: "2026.01"
+    title: No critical reachable Go vulnerabilities
+    family: ETR-VULN
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure no critical reachable vulnerabilities exist in Go dependencies.
+    risk_statement: >
+      Critical reachable vulnerabilities can be directly exploited by attackers
+      to compromise the application.
+    applies_to:
+      stacks: [go]
+      files: ["go.mod", "go.sum"]
+    tools:
+      primary: [govulncheck]
+      secondary: [trivy]
+    technical_checks:
+      - govulncheck ./...
+    pass_condition: govulncheck reports no reachable critical vulnerabilities.
+    fail_condition: govulncheck reports one or more reachable critical vulnerabilities.
+    warn_condition: govulncheck is not installed; falling back to trivy.
+    evidence:
+      raw: [raw/govulncheck.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.8]
+      cwe: []
+      owasp: [A06:2021]
+    implementation:
+      status: planned
+    remediation:
+      summary: Upgrade the affected package to the fixed version.
+      steps:
+        - For Go run `go get <package>@<fixed_version>` then `go mod tidy`.
+        - For Node run `npm install <package>@<fixed_version>`.
+        - For Python run `pip install <package>==<fixed_version>`.
+        - Verify with a fresh vulnerability scan after upgrading.
+      references:
+        - https://pkg.go.dev/vuln/
+        - https://nvd.nist.gov/vuln/search
+
+  - id: ETR-VULN-002
+    version: "2026.01"
+    title: High vulnerabilities require remediation or exception
+    family: ETR-VULN
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure high-severity vulnerabilities in dependencies are remediated or
+      formally excepted with justification.
+    risk_statement: >
+      Unaddressed high-severity vulnerabilities significantly increase the attack
+      surface available to adversaries.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["go.mod", "requirements.txt", "package.json"]
+    tools:
+      primary: [govulncheck, trivy]
+      secondary: [pip-audit, npm]
+    technical_checks:
+      - govulncheck ./...
+      - trivy fs .
+    pass_condition: No high vulnerabilities without a valid active exception.
+    fail_condition: High vulnerabilities exist without exception in strict mode.
+    warn_condition: High vulnerabilities exist in local mode.
+    evidence:
+      raw: [raw/govulncheck.json, raw/trivy-fs.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.8]
+      cwe: []
+      owasp: [A06:2021]
+    implementation:
+      status: planned
+    remediation:
+      summary: Upgrade the affected package to the fixed version.
+      steps:
+        - For Go run `go get <package>@<fixed_version>` then `go mod tidy`.
+        - For Node run `npm install <package>@<fixed_version>`.
+        - For Python run `pip install <package>==<fixed_version>`.
+        - Verify with a fresh vulnerability scan after upgrading.
+      references:
+        - https://pkg.go.dev/vuln/
+        - https://nvd.nist.gov/vuln/search
+
+  - id: ETR-VULN-003
+    version: "2026.01"
+    title: Vulnerability scanner must run in strict mode
+    family: ETR-VULN
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure at least one vulnerability scanner runs successfully in strict mode.
+    risk_statement: >
+      Missing vulnerability scan evidence means known vulnerabilities may be
+      shipped to production undetected.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: [govulncheck, trivy]
+      secondary: [pip-audit, npm]
+    pass_condition: At least one vulnerability scanner completes successfully.
+    fail_condition: No vulnerability scanner ran or all failed.
+    warn_condition: Scanner ran but produced inconclusive results.
+    evidence:
+      raw: [raw/govulncheck.json]
+      normalized: [findings.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.8.8]
+      cwe: []
+      owasp: [A06:2021]
+    implementation:
+      status: planned
+    remediation:
+      summary: Install govulncheck or trivy so vulnerability scanning can run.
+      steps:
+        - Install govulncheck with `go install golang.org/x/vuln/cmd/govulncheck@latest`.
+        - Or install trivy following https://aquasecurity.github.io/trivy/latest/getting-started/installation/.
+        - Re-run the gate to confirm a scanner completes successfully.
+      references:
+        - https://pkg.go.dev/vuln/
+        - https://aquasecurity.github.io/trivy/

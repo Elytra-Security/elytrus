@@ -1,0 +1,238 @@
+rules:
+  - id: ETR-CONFIG-001
+    version: "2026.01"
+    title: Containers must not run as root without justification
+    family: ETR-CONFIG
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure container workloads do not run as root unless explicitly
+      justified and excepted.
+    risk_statement: >
+      Running containers as root provides attackers who escape the container
+      with root access to the host.
+    applies_to:
+      stacks: [docker, kubernetes]
+      files: ["**/Dockerfile", "**/Containerfile", "**/*.yaml", "**/*.yml"]
+    tools:
+      primary: [trivy]
+      secondary: [semgrep]
+    technical_checks:
+      - trivy config .
+    pass_condition: Container configurations specify non-root USER or runAsNonRoot.
+    fail_condition: Container runs as root with no justification.
+    warn_condition: Root user usage detected; justification may exist.
+    evidence:
+      raw: [raw/trivy-config.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: [CWE-250]
+      owasp: [A05:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Configure the container to run as a non-root user.
+      steps:
+        - Add `USER nonroot` or `USER 1001` to the Dockerfile after installing dependencies.
+        - Set securityContext.runAsNonRoot to true in Kubernetes pod specs.
+        - Test the container starts correctly under the non-root user.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html
+
+  - id: ETR-CONFIG-002
+    version: "2026.01"
+    title: Privileged containers must be blocked
+    family: ETR-CONFIG
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect and block containers configured with privileged mode.
+    risk_statement: >
+      Privileged containers have full access to the host system and can be
+      used to escape container isolation entirely.
+    applies_to:
+      stacks: [docker, kubernetes]
+      files: ["**/*.yaml", "**/*.yml"]
+    tools:
+      primary: [trivy]
+      secondary: [semgrep]
+    pass_condition: "No containers configured with privileged: true."
+    fail_condition: "Container with privileged: true detected without exception."
+    warn_condition: ""
+    evidence:
+      raw: [raw/trivy-config.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: [CWE-250]
+      owasp: [A05:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove privileged mode from the container configuration.
+      steps:
+        - Set privileged to false in the Kubernetes pod spec securityContext.
+        - Replace capabilities that require privileged with specific Linux capabilities.
+        - Test the service functionality to confirm it works without privileged mode.
+      references:
+        - https://kubernetes.io/docs/concepts/policy/pod-security-policy/
+
+  - id: ETR-CONFIG-003
+    version: "2026.01"
+    title: Production debug settings must be blocked
+    family: ETR-CONFIG
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect debug mode, verbose logging, or development settings enabled
+      in production configuration.
+    risk_statement: >
+      Debug settings in production expose stack traces, internal details,
+      and sensitive data to attackers.
+    applies_to:
+      stacks: [go, python, node, docker, kubernetes]
+      files: ["**/*.yaml", "**/*.yml", "**/*.env", "**/*.toml"]
+    tools:
+      primary: [semgrep, trivy]
+      secondary: []
+    pass_condition: No debug or development mode settings in production config.
+    fail_condition: Debug mode or development settings detected in config.
+    warn_condition: Debug setting detected; environment context unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: [CWE-489]
+      owasp: [A05:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Disable debug settings in production configuration.
+      steps:
+        - Set DEBUG=false or equivalent in the production environment configuration.
+        - Remove debug middleware, pprof endpoints, and verbose error pages from production.
+        - Use environment-specific configuration files to keep debug settings out of production.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html
+
+  - id: ETR-CONFIG-004
+    version: "2026.01"
+    title: TLS verification must not be disabled
+    family: ETR-CONFIG
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect and prevent disabling of TLS certificate verification in
+      HTTP clients or configurations.
+    risk_statement: >
+      Disabled TLS verification exposes connections to man-in-the-middle
+      attacks, allowing interception of sensitive data.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts,yaml,yml}"]
+    tools:
+      primary: [gosec, semgrep]
+      secondary: [bandit]
+    pass_condition: No TLS verification skip patterns detected.
+    fail_condition: InsecureSkipVerify or equivalent TLS bypass detected.
+    warn_condition: TLS configuration detected; verification status unclear.
+    evidence:
+      raw: [raw/gosec.json, raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.24]
+      cwe: [CWE-295]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Enable TLS certificate verification in all outbound connections.
+      steps:
+        - Remove InsecureSkipVerify from TLS configurations.
+        - Use a properly configured CA bundle for certificate validation.
+        - Test the connection to confirm it succeeds with certificate verification enabled.
+      references:
+        - https://pkg.go.dev/crypto/tls#Config
+
+  - id: ETR-CONFIG-005
+    version: "2026.01"
+    title: Container base images must be pinned
+    family: ETR-CONFIG
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure container base images use specific version tags or digest
+      pins rather than mutable tags like "latest".
+    risk_statement: >
+      Mutable image tags can silently change between builds, introducing
+      untested or malicious code into the container.
+    applies_to:
+      stacks: [docker, kubernetes]
+      files: ["**/Dockerfile", "**/Containerfile", "**/*.yaml", "**/*.yml"]
+    tools:
+      primary: [trivy, semgrep]
+      secondary: []
+    pass_condition: >
+      All base images use specific version tags (e.g., ubuntu:24.04) or
+      digest pins (image@sha256:...).
+    fail_condition: Base image uses "latest" tag or no tag.
+    warn_condition: Version-pinned but not digest-pinned in release mode.
+    evidence:
+      raw: [raw/trivy-config.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Pin container base images to a specific digest.
+      steps:
+        - Replace `FROM image:latest` with `FROM image:tag@sha256:<digest>`.
+        - Use Dependabot or Renovate to keep pinned digests up to date automatically.
+        - Verify the pinned digest in CI before building.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html

@@ -1,0 +1,379 @@
+rules:
+  - id: ETR-SECCODE-001
+    version: "2026.01"
+    title: No critical or high secure coding findings
+    family: ETR-SECCODE
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure no critical or high secure coding violations exist in source code.
+    risk_statement: >
+      Critical and high secure coding violations introduce exploitable
+      vulnerabilities that attackers can leverage.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [gosec, semgrep]
+      secondary: [bandit]
+    technical_checks:
+      - gosec ./...
+      - semgrep --config auto .
+    pass_condition: No critical or high findings from security scanners.
+    fail_condition: Critical or high findings reported by security scanners.
+    warn_condition: Medium or low findings present.
+    evidence:
+      raw: [raw/gosec.json, raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.25, A.8.28]
+      cwe: []
+      owasp: [A03:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Review and fix the insecure code pattern identified in the evidence.
+      steps:
+        - Review the specific rule in the evidence field for the exact issue.
+        - For G114 (no HTTP timeout) use http.Server with ReadTimeout, WriteTimeout, IdleTimeout.
+        - For G401/G501 (weak crypto) replace MD5/SHA1 with SHA-256 or stronger.
+      references:
+        - https://github.com/securego/gosec
+        - https://semgrep.dev/r
+
+  - id: ETR-SECCODE-002
+    version: "2026.01"
+    title: Unsafe command execution must be controlled
+    family: ETR-SECCODE
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect and prevent unsafe command execution that allows command injection.
+    risk_statement: >
+      Uncontrolled command execution with user-controlled input enables
+      command injection attacks leading to full system compromise.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [gosec, semgrep]
+      secondary: [bandit]
+    pass_condition: No shell=true or unsafe exec patterns with user-controlled input.
+    fail_condition: Command execution patterns with unsanitized input detected.
+    warn_condition: Command execution detected; manual review recommended.
+    evidence:
+      raw: [raw/gosec.json, raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.28]
+      cwe: [CWE-78]
+      owasp: [A03:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Replace unsafe command execution with a safe alternative.
+      steps:
+        - Avoid passing user-controlled input to exec.Command or os/exec.
+        - Use a whitelist of allowed commands and arguments.
+        - Validate and sanitize all input before passing it to any exec call.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html
+
+  - id: ETR-SECCODE-003
+    version: "2026.01"
+    title: SQL and query construction must be safe
+    family: ETR-SECCODE
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure SQL queries are constructed using parameterized queries or ORMs,
+      not string concatenation with user input.
+    risk_statement: >
+      SQL injection via string-constructed queries can result in data exfiltration,
+      authentication bypass, or data destruction.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [gosec, semgrep]
+      secondary: [bandit]
+    pass_condition: No SQL string concatenation patterns with user-controlled input.
+    fail_condition: SQL injection-prone query construction patterns detected.
+    warn_condition: Dynamic query construction detected; review recommended.
+    evidence:
+      raw: [raw/gosec.json, raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.28]
+      cwe: [CWE-89]
+      owasp: [A03:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Replace string-concatenated queries with parameterised queries.
+      steps:
+        - Use prepared statements or parameterised queries for all database calls.
+        - Never concatenate user input into SQL strings.
+        - Use an ORM that handles parameterisation automatically if available.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+
+  - id: ETR-SECCODE-004
+    version: "2026.01"
+    title: Weak cryptography must be blocked
+    family: ETR-SECCODE
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect and prevent use of weak or deprecated cryptographic algorithms.
+    risk_statement: >
+      Weak cryptography (MD5, SHA1, DES, RC4) provides inadequate protection
+      and can be broken by attackers.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [gosec, semgrep]
+      secondary: [bandit]
+    pass_condition: No use of weak cryptographic algorithms detected.
+    fail_condition: Weak or deprecated cryptographic algorithms detected in use.
+    warn_condition: Non-recommended algorithm detected but context unclear.
+    evidence:
+      raw: [raw/gosec.json, raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.24]
+      cwe: [CWE-327, CWE-328]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Replace weak cryptographic algorithms with approved strong equivalents.
+      steps:
+        - Replace MD5 and SHA1 with SHA-256 or SHA-3 for all security-relevant hashing.
+        - Replace DES and RC4 with AES-256-GCM for symmetric encryption.
+        - Use golang.org/x/crypto or a well-audited library for cryptographic operations.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html
+
+  - id: ETR-SECCODE-005
+    version: "2026.01"
+    title: Unsafe file path handling must be reviewed
+    family: ETR-SECCODE
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect path traversal vulnerabilities where user-controlled input is used
+      in file system operations without sanitization.
+    risk_statement: >
+      Path traversal allows attackers to read or write files outside the intended
+      directory, enabling data exfiltration or system compromise.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [gosec, semgrep]
+      secondary: [bandit]
+    pass_condition: File path operations do not use unsanitized user input.
+    fail_condition: Path traversal patterns with user-controlled input detected.
+    warn_condition: Dynamic file path construction detected; review recommended.
+    evidence:
+      raw: [raw/gosec.json, raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.28]
+      cwe: [CWE-22]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Validate and sanitise all file paths before use.
+      steps:
+        - Use filepath.Clean and confirm the resolved path is within the expected directory.
+        - Reject paths containing `..` or absolute references to sensitive locations.
+        - Run gosec G304 checks locally and fix each reported path.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
+
+  - id: ETR-SECCODE-006
+    version: "2026.01"
+    title: Unsafe deserialization must be blocked or reviewed
+    family: ETR-SECCODE
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect unsafe deserialization of untrusted data that may allow remote
+      code execution or object injection.
+    risk_statement: >
+      Deserialization of attacker-controlled data can lead to remote code
+      execution or privilege escalation.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [semgrep]
+      secondary: [bandit]
+    pass_condition: No unsafe deserialization of untrusted input detected.
+    fail_condition: Unsafe deserialization patterns with untrusted input detected.
+    warn_condition: Deserialization pattern detected; trust source unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.28]
+      cwe: [CWE-502]
+      owasp: [A08:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Replace unsafe deserialisation with a safe data format and validation.
+      steps:
+        - Avoid deserialising untrusted data into arbitrary types.
+        - Use JSON or Protocol Buffers with a strict schema validator.
+        - If deserialisation is required add type and integrity checks before use.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html
+
+  - id: ETR-SECCODE-007
+    version: "2026.01"
+    title: Server-side request forgery risk must be controlled
+    family: ETR-SECCODE
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect SSRF vulnerabilities where user-controlled URLs are used in
+      outbound HTTP requests.
+    risk_statement: >
+      SSRF allows attackers to make the server send requests to internal services,
+      enabling cloud metadata theft and internal network scanning.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [semgrep]
+      secondary: [gosec, bandit]
+    pass_condition: HTTP requests do not use user-controlled URLs without validation.
+    fail_condition: SSRF-prone patterns with user-controlled URLs detected.
+    warn_condition: Outbound HTTP with dynamic URL detected; review recommended.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.28]
+      cwe: [CWE-918]
+      owasp: [A10:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Validate and restrict outbound request targets to prevent SSRF.
+      steps:
+        - Validate user-supplied URLs against an allowlist of trusted hosts.
+        - Block requests to private IP ranges (10.x, 172.16.x, 192.168.x, 169.254.x).
+        - Use a dedicated HTTP client configured to deny internal network access.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
+
+  - id: ETR-SECCODE-008
+    version: "2026.01"
+    title: Open redirects must be prevented
+    family: ETR-SECCODE
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect open redirect vulnerabilities in authentication, password reset,
+      and other sensitive flows.
+    risk_statement: >
+      Open redirects in auth flows enable phishing attacks and OAuth
+      token theft by redirecting users to attacker-controlled sites.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [semgrep]
+      secondary: [gosec, bandit]
+    pass_condition: Redirect parameters are validated against an allowlist.
+    fail_condition: >
+      Unvalidated redirect parameters (next, url, redirect, return,
+      callback, target, destination) detected in sensitive flows.
+    warn_condition: Redirect parameter detected; flow sensitivity unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.28]
+      cwe: [CWE-601]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Validate redirect targets against a trusted list to prevent open redirect.
+      steps:
+        - Validate the redirect URL against an allowlist of trusted paths or domains.
+        - For internal navigation use relative paths only.
+        - Never pass a user-supplied URL directly to window.location, useNavigate, or router.push.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html

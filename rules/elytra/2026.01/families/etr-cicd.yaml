@@ -1,0 +1,141 @@
+rules:
+  - id: ETR-CICD-001
+    version: "2026.01"
+    title: CI/CD workflows must not use unsafe script fetching
+    family: ETR-CICD
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect curl-pipe-bash or wget-pipe-sh patterns in CI/CD workflows
+      that fetch and execute remote scripts.
+    risk_statement: >
+      Fetching and executing remote scripts in CI/CD pipelines enables
+      supply chain attacks via compromised script hosting.
+    applies_to:
+      stacks: [cicd]
+      files: [".github/workflows/*.yml", ".github/workflows/*.yaml", ".gitlab-ci.yml"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: No curl|bash or wget|sh patterns in CI/CD workflows.
+    fail_condition: Unsafe remote script execution detected in CI/CD workflow.
+    warn_condition: Remote fetch detected; pipe-to-shell pattern unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.8, A.5.19]
+      cwe: [CWE-494]
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Replace unsafe script-fetching patterns in CI/CD workflows.
+      steps:
+        - Replace `curl | bash` or `wget | sh` with pinned verified downloads.
+        - Download the script, verify its checksum, then execute it.
+        - Or use a pinned GitHub Action or container image instead.
+      references:
+        - https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
+
+  - id: ETR-CICD-002
+    version: "2026.01"
+    title: Third-party GitHub Actions must be pinned
+    family: ETR-CICD
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure all third-party GitHub Actions are pinned to a specific
+      commit SHA rather than a mutable tag.
+    risk_statement: >
+      Unpinned Actions can silently change behavior between runs, enabling
+      supply chain attacks via tag mutation.
+    applies_to:
+      stacks: [cicd]
+      files: [".github/workflows/*.yml", ".github/workflows/*.yaml"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: "All third-party Actions use commit SHA pins (uses: owner/action@abc1234)."
+    fail_condition: Third-party Action uses mutable tag (e.g., @v2, @main, @latest).
+    warn_condition: Action reference detected; pin status unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: [CWE-494]
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Pin third-party GitHub Actions to a full commit SHA.
+      steps:
+        - Replace action@tag pins with action@<full-commit-sha> pins in workflows.
+        - Use Dependabot or pin-github-action to manage SHA updates automatically.
+        - Commit the pinned SHA alongside a comment showing the human-readable version tag.
+      references:
+        - https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
+
+  - id: ETR-CICD-003
+    version: "2026.01"
+    title: CI/CD workflows must not print secrets
+    family: ETR-CICD
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect patterns in CI/CD workflows that may print or expose secrets
+      through echo, print, or debug output.
+    risk_statement: >
+      Secrets printed in CI/CD logs may be captured by log aggregation
+      systems or exposed to unauthorized parties.
+    applies_to:
+      stacks: [cicd]
+      files: [".github/workflows/*.yml", ".github/workflows/*.yaml", ".gitlab-ci.yml"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: No echo or print statements exposing secret variables in CI/CD.
+    fail_condition: Secret variable printed or echoed in CI/CD workflow.
+    warn_condition: Variable reference in output detected; secrecy unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.13]
+      cwe: [CWE-312, CWE-532]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove secret printing from CI/CD workflow steps.
+      steps:
+        - Replace `echo $SECRET` or `echo ${{ secrets.X }}` with a non-printing equivalent.
+        - Use masked variables if the CI platform supports them.
+        - Audit recent workflow run logs to confirm no secrets were exposed.
+      references:
+        - https://docs.github.com/en/actions/security-guides/encrypted-secrets

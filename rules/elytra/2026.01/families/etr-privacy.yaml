@@ -1,0 +1,281 @@
+rules:
+  - id: ETR-PRIVACY-001
+    version: "2026.01"
+    title: New personal data fields must be classified
+    family: ETR-PRIVACY
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure new personal data fields introduced in schema changes or
+      struct definitions are classified in the privacy configuration.
+    risk_statement: >
+      Unclassified personal data fields may be logged, exported, or
+      processed without appropriate controls.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,ts,js}"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Personal data fields are listed in privacy classification config.
+    fail_condition: New personal data field detected without classification.
+    warn_condition: Potential personal field detected; classification unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.12, A.5.33]
+      cwe: []
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a privacy classification tag to the new personal data field.
+      steps:
+        - Add `json:"-"` or `db:"-"` to struct fields that must not be serialised.
+        - Add a `privacy:"pii"` struct tag to document personal data fields.
+        - Ensure the field is excluded from API responses unless explicitly required.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
+
+  - id: ETR-PRIVACY-002
+    version: "2026.01"
+    title: Sensitive personal data must not be logged
+    family: ETR-PRIVACY
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect patterns where sensitive personal data fields flow into
+      log statements.
+    risk_statement: >
+      Personal data in logs violates privacy regulations and creates
+      data exposure risk through log aggregation systems.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,ts,js}"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Sensitive personal data fields are not present in log statements.
+    fail_condition: Personal data field detected in log output.
+    warn_condition: Field in log context; sensitivity unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.12, A.5.33]
+      cwe: [CWE-532]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove the personal data value from the log statement.
+      steps:
+        - Replace the PII value with a redacted placeholder or omit it entirely.
+        - If the email or name is needed for debugging log only a hash or anonymised form.
+        - Review other log statements in the same file for similar patterns.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
+
+  - id: ETR-PRIVACY-003
+    version: "2026.01"
+    title: APIs must not expose personal data fields unless explicitly allowed
+    family: ETR-PRIVACY
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure API responses do not serialize personal data fields unless
+      the field is explicitly allowed in the privacy configuration.
+    risk_statement: >
+      APIs that over-expose personal data violate privacy regulations and
+      data minimization principles.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/api/**", "**/handler/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Personal data fields are excluded or masked in API responses.
+    fail_condition: Personal data field exposed in API response without allowlist entry.
+    warn_condition: Response serialization detected; personal field exposure unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.12]
+      cwe: []
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Exclude or mask personal data fields from the API response schema.
+      steps:
+        - Add `json:"-"` to struct fields that must not appear in API responses.
+        - Or apply an explicit allow-list of fields returned by the API handler.
+        - Review the OpenAPI schema for unintentional personal data exposure.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html
+
+  - id: ETR-PRIVACY-004
+    version: "2026.01"
+    title: Test data must not contain real personal data
+    family: ETR-PRIVACY
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure test fixtures and test data do not contain real personal data.
+    risk_statement: >
+      Real personal data in test fixtures is not subject to production
+      access controls and creates regulatory and breach risk.
+    applies_to:
+      stacks: [all]
+      files: ["**/testdata/**", "**/fixtures/**", "**/*_test.*"]
+    tools:
+      primary: [semgrep, gitleaks]
+      secondary: []
+    pass_condition: No real personal data patterns detected in test fixtures.
+    fail_condition: Real personal data detected in test data or fixtures.
+    warn_condition: Personal data pattern detected; synthetic status unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.12]
+      cwe: []
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Replace real personal data in test fixtures with synthetic equivalents.
+      steps:
+        - Replace real emails, phone numbers, and ID numbers with obviously fake values.
+        - Use a test data library such as faker to generate synthetic test data.
+        - Run a secret scan over the test data directory to confirm no real PII remains.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Test_Data_Management_Cheat_Sheet.html
+
+  - id: ETR-PRIVACY-005
+    version: "2026.01"
+    title: Data export functions must apply masking or authorization checks
+    family: ETR-PRIVACY
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure data export functions apply masking, filtering, or authorization
+      checks before returning data.
+    risk_statement: >
+      Data export functions without authorization or masking may expose
+      bulk personal data to unauthorized parties.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/export/**", "**/report/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Export functions include authorization checks or masking.
+    fail_condition: Export function with no authorization or masking detected.
+    warn_condition: Export function detected; controls status unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.12, A.8.3]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add authorisation checks and data masking to all data export functions.
+      steps:
+        - Confirm the caller has the necessary role before returning exported data.
+        - Mask or redact sensitive fields in the export output unless the caller has explicit access.
+        - Log all data export operations for audit purposes.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
+
+  - id: ETR-PRIVACY-006
+    version: "2026.01"
+    title: Privacy-sensitive changes must be marked for review in strict mode
+    family: ETR-PRIVACY
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure changes affecting personal data handling are flagged for
+      privacy review in strict and release modes.
+    risk_statement: >
+      Privacy-sensitive changes without review may introduce violations
+      of data protection regulations.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Privacy-sensitive changes are reviewed or marked for review.
+    fail_condition: ""
+    warn_condition: Privacy-sensitive change detected; review status unknown.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.12]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Mark privacy-sensitive changes for review before merging in strict mode.
+      steps:
+        - Add a privacy review comment to the pull request explaining the data handling change.
+        - Get explicit approval from the data protection owner before merging.
+        - Update the data flow diagram if new personal data processing is introduced.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Privacy_Engineering_Cheat_Sheet.html

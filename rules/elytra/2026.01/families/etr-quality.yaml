@@ -1,0 +1,238 @@
+rules:
+  - id: ETR-QUALITY-001
+    version: "2026.01"
+    title: Go code must be formatted
+    family: ETR-QUALITY
+    severity: low
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure Go code follows standard formatting using gofmt.
+    risk_statement: >
+      Unformatted code reduces readability and indicates the standard
+      development workflow was not followed.
+    applies_to:
+      stacks: [go]
+      files: ["**/*.go"]
+    tools:
+      primary: [go]
+      secondary: []
+    technical_checks:
+      - gofmt -l .
+    pass_condition: gofmt -l . produces no output.
+    fail_condition: gofmt -l . lists unformatted files.
+    warn_condition: ""
+    evidence:
+      raw: [raw/gofmt.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Format Go source files with gofmt.
+      steps:
+        - Run `gofmt -w ./...` to reformat all Go files in place.
+        - Add a `gofmt -l` check to your CI pipeline to catch formatting drift early.
+      references:
+        - https://pkg.go.dev/cmd/gofmt
+
+  - id: ETR-QUALITY-002
+    version: "2026.01"
+    title: Go vet must pass
+    family: ETR-QUALITY
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure go vet reports no issues in Go source code.
+    risk_statement: >
+      go vet catches suspicious constructs that may indicate bugs or
+      security issues at compile time.
+    applies_to:
+      stacks: [go]
+      files: ["**/*.go"]
+    tools:
+      primary: [go]
+      secondary: []
+    technical_checks:
+      - go vet ./...
+    pass_condition: go vet ./... exits 0.
+    fail_condition: go vet ./... exits non-zero or reports issues.
+    warn_condition: ""
+    evidence:
+      raw: [raw/go-vet.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Fix the issues reported by go vet.
+      steps:
+        - Run `go vet ./...` locally and review each reported issue.
+        - Fix suspicious constructs such as unreachable code and printf format mismatches.
+      references:
+        - https://pkg.go.dev/cmd/vet
+
+  - id: ETR-QUALITY-003
+    version: "2026.01"
+    title: Staticcheck findings must be reviewed
+    family: ETR-QUALITY
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure staticcheck findings are reviewed and addressed.
+    risk_statement: >
+      Staticcheck detects bugs, performance issues, and deprecated API usage
+      that may cause runtime errors.
+    applies_to:
+      stacks: [go]
+      files: ["**/*.go"]
+    tools:
+      primary: [staticcheck]
+      secondary: []
+    technical_checks:
+      - staticcheck ./...
+    pass_condition: staticcheck ./... exits 0 with no findings.
+    fail_condition: staticcheck reports findings that exceed configured threshold.
+    warn_condition: staticcheck is not installed; check skipped.
+    evidence:
+      raw: [raw/staticcheck.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Review and fix the staticcheck findings listed in the evidence.
+      steps:
+        - Install staticcheck with `go install honnef.co/go/tools/cmd/staticcheck@latest`.
+        - Run `staticcheck ./...` locally and fix each reported issue.
+        - For intentional findings add a `//nolint:staticcheck` comment with a reason.
+      references:
+        - https://staticcheck.dev/docs/
+
+  - id: ETR-QUALITY-004
+    version: "2026.01"
+    title: Python linting must run when available
+    family: ETR-QUALITY
+    severity: low
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure Python code follows quality standards using ruff.
+    risk_statement: >
+      Python quality issues may mask bugs or security vulnerabilities.
+    applies_to:
+      stacks: [python]
+      files: ["**/*.py"]
+    tools:
+      primary: [ruff]
+      secondary: [python]
+    technical_checks:
+      - ruff check .
+    pass_condition: ruff check . exits 0.
+    fail_condition: ruff check . reports lint errors.
+    warn_condition: ruff is not installed; check skipped.
+    evidence:
+      raw: [raw/ruff.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Fix the Python lint findings or install ruff to enable linting.
+      steps:
+        - Install ruff with `pip install ruff`.
+        - Run `ruff check .` locally and fix each reported issue.
+        - Add ruff to your CI configuration so lint failures block merges.
+      references:
+        - https://docs.astral.sh/ruff/
+
+  - id: ETR-QUALITY-005
+    version: "2026.01"
+    title: Node/React lint and type checks must run when configured
+    family: ETR-QUALITY
+    severity: low
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure Node/React code passes ESLint and TypeScript type checking
+      when these tools are configured.
+    risk_statement: >
+      Lint and type errors may indicate runtime bugs or security issues.
+    applies_to:
+      stacks: [node, react]
+      files: ["**/*.{js,ts,jsx,tsx}"]
+    tools:
+      primary: [eslint, tsc]
+      secondary: [node, npm]
+    technical_checks:
+      - eslint .
+      - tsc --noEmit
+    pass_condition: eslint and tsc exit 0 with no errors.
+    fail_condition: eslint or tsc report errors.
+    warn_condition: eslint or tsc not configured; check skipped.
+    evidence:
+      raw: [raw/eslint.txt, raw/tsc.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Fix the ESLint or TypeScript type errors reported in the evidence.
+      steps:
+        - Run `npx eslint .` locally and fix each reported issue.
+        - Run `npx tsc --noEmit` to check for type errors.
+        - Add both checks to your CI configuration so failures block merges.
+      references:
+        - https://eslint.org/docs/latest/

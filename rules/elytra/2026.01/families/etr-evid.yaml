@@ -1,0 +1,185 @@
+rules:
+  - id: ETR-EVID-001
+    version: "2026.01"
+    title: Every run must produce an evidence bundle
+    family: ETR-EVID
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: fail
+      strict: fail
+      release: fail
+    objective: >
+      Ensure every Elytrus run produces an evidence bundle under
+      .elytrus/runs/<run-id>/, regardless of whether checks pass or fail.
+    risk_statement: >
+      Missing evidence means there is no auditable record that assurance
+      checks were performed.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: .elytrus/runs/<run-id>/ directory is created with summary.json.
+    fail_condition: Evidence bundle directory not created or summary.json absent.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [summary.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.8.20, A.5.28]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure the evidence bundle directory is initialised before running packs.
+      steps:
+        - The evidence bundle is created automatically; investigate why the directory is missing.
+        - Check file system permissions on the scan target directory.
+        - Re-run `elytrus gate` to confirm the bundle is created.
+      references:
+        - https://pkg.go.dev/os#MkdirAll
+
+  - id: ETR-EVID-002
+    version: "2026.01"
+    title: Tool versions must be captured
+    family: ETR-EVID
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure tool versions used during the run are recorded in
+      metadata/tool-versions.json.
+    risk_statement: >
+      Missing tool version records prevent reproduction of the assurance
+      run and make findings non-attributable to specific scanner versions.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: metadata/tool-versions.json is present with tool version entries.
+    fail_condition: metadata/tool-versions.json is missing.
+    warn_condition: Some tool versions not captured.
+    evidence:
+      raw: []
+      normalized: [metadata/tool-versions.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure tool version capture runs before packs execute.
+      steps:
+        - Confirm `tools.Check()` is called before pack execution in the gate flow.
+        - Check that tool-versions.json is written to the evidence bundle.
+      references:
+        - https://pkg.go.dev/os/exec
+
+  - id: ETR-EVID-003
+    version: "2026.01"
+    title: Policy version and hash must be captured
+    family: ETR-EVID
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure the policy configuration version and SHA256 hash are captured
+      in evidence metadata.
+    risk_statement: >
+      Missing policy version makes it impossible to determine which policy
+      was applied to a given run, undermining audit reliability.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: metadata/policy.json and metadata/policy-hash.txt are present.
+    fail_condition: Policy metadata or hash files are missing.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [metadata/policy.json, metadata/policy-hash.txt]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure policy.json and policy-hash.txt are written to the evidence bundle.
+      steps:
+        - Confirm `bundle.WritePolicy(cfg)` is called early in the gate flow.
+        - Check that .elytrus.yaml is readable from the scan path.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html
+
+  - id: ETR-EVID-004
+    version: "2026.01"
+    title: Attestation must reflect final gate decision
+    family: ETR-EVID
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure attestation.json accurately reflects the final gate decision,
+      exit code, and run outcome.
+    risk_statement: >
+      An attestation that does not reflect the true outcome can mislead
+      reviewers and provide false assurance.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: attestation.json status field matches the actual run outcome.
+    fail_condition: attestation.json missing or status field does not match outcome.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [attestation.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: [A.8.20]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure the attestation accurately reflects the final gate decision.
+      steps:
+        - Confirm attestation.json is written after all packs and policy evaluation complete.
+        - Check that the attestation result field matches the gate exit code.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html

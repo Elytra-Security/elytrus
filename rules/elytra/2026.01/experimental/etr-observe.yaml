@@ -1,0 +1,184 @@
+rules:
+  - id: ETR-OBSERVE-001
+    version: "2026.01"
+    title: Privileged actions should emit audit events
+    family: ETR-OBSERVE
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure privileged actions (admin operations, permission changes,
+      data exports) emit structured audit events.
+    risk_statement: >
+      Privileged actions without audit events cannot be investigated
+      during security incidents.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/admin/**", "**/audit/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Privileged operations include audit event emission.
+    fail_condition: Privileged action without audit event detected.
+    warn_condition: Privileged operation detected; audit coverage unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.15, A.8.16]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add structured logging to the service so requests and errors are observable.
+      steps:
+        - Use a structured logger (e.g. slog, zap, logrus) instead of fmt.Println.
+        - Log at least request ID, method, path, status, and latency for each request.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
+
+  - id: ETR-OBSERVE-002
+    version: "2026.01"
+    title: Critical services should expose safe health checks
+    family: ETR-OBSERVE
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure critical services expose health check endpoints that are safe
+      and do not expose sensitive information.
+    risk_statement: >
+      Missing health checks prevent monitoring and may result in undetected
+      service degradation.
+    applies_to:
+      stacks: [go, node]
+      files: ["**/handler/**", "**/api/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Service exposes a health check endpoint without sensitive data.
+    fail_condition: ""
+    warn_condition: No health check endpoint detected in service.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Expose a health check endpoint so infrastructure can detect failures.
+      steps:
+        - Add a /healthz or /health endpoint that returns 200 when the service is healthy.
+        - Include dependency status (database, cache) in the health response.
+      references:
+        - https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+
+  - id: ETR-OBSERVE-003
+    version: "2026.01"
+    title: Error handling must not leak sensitive internals
+    family: ETR-OBSERVE
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure error handlers do not propagate stack traces, SQL errors,
+      or internal details to external callers.
+    risk_statement: >
+      Leaked internal details in errors provide attackers with information
+      useful for exploitation.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Error handlers return generic messages without internal details.
+    fail_condition: Error handler propagating internal details to external callers.
+    warn_condition: Error propagation pattern detected; detail level unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: [CWE-209]
+      owasp: [A05:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add metrics instrumentation so latency and error rates are measurable.
+      steps:
+        - Instrument key request paths with a metrics library such as prometheus/client_golang.
+        - Expose a /metrics endpoint for scraping.
+      references:
+        - https://prometheus.io/docs/guides/go-application/
+
+  - id: ETR-OBSERVE-004
+    version: "2026.01"
+    title: Metrics endpoints must not expose sensitive data
+    family: ETR-OBSERVE
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure metrics and monitoring endpoints do not expose sensitive data
+      such as user IDs, IP addresses, or business metrics.
+    risk_statement: >
+      Unprotected metrics with sensitive labels create privacy violations
+      and expose business intelligence.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/metrics/**", "**/handler/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Metrics labels do not include sensitive personal or business data.
+    fail_condition: Sensitive data label in metrics endpoint detected.
+    warn_condition: Metrics endpoint detected; label sensitivity unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.15]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add distributed tracing so request flows can be followed across services.
+      steps:
+        - Add OpenTelemetry instrumentation to outbound HTTP and gRPC calls.
+        - Propagate trace context headers (traceparent) on all outbound requests.
+      references:
+        - https://opentelemetry.io/docs/languages/go/

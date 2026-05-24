@@ -1,0 +1,94 @@
+rules:
+  - id: ETR-LOG-001
+    version: "2026.01"
+    title: Logs must not contain secrets
+    family: ETR-LOG
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure log statements do not output secrets, API keys, tokens,
+      or other credentials.
+    risk_statement: >
+      Secrets in logs can be captured by log aggregation systems,
+      monitoring services, or unauthorized parties with log access.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [semgrep, gitleaks]
+      secondary: []
+    pass_condition: No secret or credential values detected in log statements.
+    fail_condition: Secret or credential value detected in log output.
+    warn_condition: Sensitive field in log context; value type unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.13, A.8.15]
+      cwe: [CWE-532, CWE-312]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove the secret value from the log statement.
+      steps:
+        - Never log password, token, or key values even in error handlers.
+        - Log only the existence of the field and not its value.
+        - For error context log the error message only and not the credential value.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
+
+  - id: ETR-LOG-002
+    version: "2026.01"
+    title: Sensitive request and response bodies must not be logged by default
+    family: ETR-LOG
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure HTTP request and response bodies are not logged by default,
+      especially for authentication and data submission endpoints.
+    risk_statement: >
+      Logging full request/response bodies captures credentials, tokens,
+      and personal data, creating serious privacy and security exposure.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/middleware/**", "**/handler/**", "**/logger/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Request/response body logging is not the default behavior.
+    fail_condition: Full request or response body logged without redaction.
+    warn_condition: Body logging detected; sensitive field filtering unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.15]
+      cwe: [CWE-532]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove or redact HTTP body content from log statements.
+      steps:
+        - Never log request or response bodies at INFO or higher log levels.
+        - If body logging is needed for debugging use DEBUG level and gate it behind a flag.
+        - Redact sensitive fields before logging using a structured log sanitiser.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html

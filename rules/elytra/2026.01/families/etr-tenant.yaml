@@ -1,0 +1,94 @@
+rules:
+  - id: ETR-TENANT-001
+    version: "2026.01"
+    title: Tenant-scoped data access must be enforced
+    family: ETR-TENANT
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure all database queries and data access operations in multi-tenant
+      repositories include tenant scope filtering.
+    risk_statement: >
+      Missing tenant scope in data access allows one tenant to access another
+      tenant's data, a severe data isolation violation.
+    applies_to:
+      stacks: [go, node]
+      files: ["**/*"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: All data access paths include tenant ID filtering.
+    fail_condition: Data access without tenant scope detected in multi-tenant repo.
+    warn_condition: Tenant scoping pattern detected; completeness unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3, A.9.4]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add tenant context enforcement to the data access call in the evidence.
+      steps:
+        - Add a tenant_id parameter to the repository function and include it in the WHERE clause.
+        - Confirm the tenant ID is sourced from the authenticated request context, not user input.
+        - Write a test that confirms one tenant cannot access another tenant's data.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
+
+  - id: ETR-TENANT-002
+    version: "2026.01"
+    title: Tenant context must not be optional in protected paths
+    family: ETR-TENANT
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure tenant context is required and validated in all protected
+      code paths in multi-tenant repositories.
+    risk_statement: >
+      Optional tenant context allows callers to omit tenant scoping,
+      enabling cross-tenant data access.
+    applies_to:
+      stacks: [go, node]
+      files: ["**/*"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Tenant context is validated at protected entry points.
+    fail_condition: Protected paths accept requests with absent or nil tenant context.
+    warn_condition: Tenant validation present but bypass path exists.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Make the tenant context required rather than optional in protected code paths.
+      steps:
+        - Change the tenant context parameter from a pointer or option to a required value.
+        - Add a guard at the function entry that returns an error if tenant context is missing.
+        - Update all callers to supply the tenant context explicitly.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html

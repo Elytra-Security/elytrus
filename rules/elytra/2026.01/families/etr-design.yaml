@@ -1,0 +1,472 @@
+rules:
+  - id: ETR-DESIGN-001
+    version: "2026.01"
+    title: Architecture manifest should exist for strict design review
+    family: ETR-DESIGN
+    severity: low
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure an architecture manifest or design document exists describing
+      the system boundaries and layers.
+    risk_statement: >
+      Without an architecture manifest, design reviews cannot be systematic
+      and boundary violations may go undetected.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Architecture manifest file exists in repository.
+    fail_condition: No architecture manifest found in repository.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add an architecture manifest to enable strict design review.
+      steps:
+        - Add a `design` section to .elytrus.yaml with layers, forbidden_imports, or guards.
+        - Document the intended package dependency graph in docs/ARCHITECTURE.md.
+        - Re-run `elytrus gate --strict` to confirm the design rules pass.
+      references:
+        - https://pkg.go.dev/golang.org/x/tools/go/packages
+
+  - id: ETR-DESIGN-002
+    version: "2026.01"
+    title: Forbidden dependency directions must not occur
+    family: ETR-DESIGN
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect import cycles or forbidden dependency directions defined in
+      the architecture configuration.
+    risk_statement: >
+      Forbidden imports indicate boundary violations that undermine
+      the intended architecture and security isolation.
+    applies_to:
+      stacks: [go, node]
+      files: ["**/*.{go,ts,js}"]
+    tools:
+      primary: [go]
+      secondary: [semgrep]
+    technical_checks:
+      - go list -json ./...
+    pass_condition: No configured forbidden import directions detected.
+    fail_condition: Forbidden import direction detected per design configuration.
+    warn_condition: ""
+    evidence:
+      raw: [raw/go-list.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove the forbidden dependency direction identified in the evidence.
+      steps:
+        - Identify the import that violates the declared layer boundary.
+        - Extract the shared logic into a lower-level package both sides can import.
+        - Or invert the dependency using an interface defined in the higher-level package.
+      references:
+        - https://pkg.go.dev/golang.org/x/tools/go/packages
+
+  - id: ETR-DESIGN-003
+    version: "2026.01"
+    title: External entrypoints must pass through approved auth boundary
+    family: ETR-DESIGN
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure external entrypoints (HTTP handlers, RPC endpoints) reference
+      approved authentication and authorization middleware.
+    risk_statement: >
+      Entrypoints that bypass the auth boundary allow unauthenticated
+      access to protected resources.
+    applies_to:
+      stacks: [go, node]
+      files: ["**/handler/**", "**/api/**", "**/route/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: All external handlers reference configured auth guard packages.
+    fail_condition: External handler detected without auth boundary reference.
+    warn_condition: Handler detected; auth boundary reference unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3, A.9.4]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add the required auth guard to the external entrypoint function.
+      steps:
+        - Add the required guard call (e.g. requireAuth or checkPermission) to the entrypoint.
+        - Confirm the guard is called before any data access or business logic.
+        - Write a test that confirms unauthenticated requests are rejected.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
+
+  - id: ETR-DESIGN-004
+    version: "2026.01"
+    title: Tenant-scoped code must preserve tenant context
+    family: ETR-DESIGN
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure tenant context is propagated through all layers of tenant-scoped
+      code paths without being dropped or ignored.
+    risk_statement: >
+      Dropped tenant context mid-stack allows lower layers to execute
+      without isolation, enabling cross-tenant access.
+    applies_to:
+      stacks: [go, node]
+      files: ["**/tenant/**", "**/service/**"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Tenant context is threaded through all function calls in scoped paths.
+    fail_condition: Tenant context is dropped or not passed in tenant-scoped code paths.
+    warn_condition: Context propagation pattern detected; completeness unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Propagate tenant context through all scoped data access calls.
+      steps:
+        - Add a tenant context parameter to functions that access scoped data.
+        - Ensure the tenant ID from the incoming request context is threaded through.
+        - Write a test that confirms data cannot be accessed without a tenant context.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
+
+  - id: ETR-DESIGN-005
+    version: "2026.01"
+    title: Database access must go through approved repository or data layer
+    family: ETR-DESIGN
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure database access does not occur directly in handler or service
+      layers, bypassing the data layer.
+    risk_statement: >
+      Direct database access from handlers bypasses query authorization,
+      auditing, and tenant filtering applied in the data layer.
+    applies_to:
+      stacks: [go, node]
+      files: ["**/*.{go,ts,js}"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Database access only through configured repository/data layer packages.
+    fail_condition: Direct database access in handler or service layer detected.
+    warn_condition: Database client import detected; layer context unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Route all database access through the approved data layer or repository.
+      steps:
+        - Move direct database calls from the identified file into the repository package.
+        - Inject the repository interface rather than calling the database directly.
+        - Update tests to use a mock repository rather than a live database connection.
+      references:
+        - https://en.wikipedia.org/wiki/Repository_pattern
+
+  - id: ETR-DESIGN-006
+    version: "2026.01"
+    title: Sensitive fields must not flow to logs or frontend responses
+    family: ETR-DESIGN
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect patterns where sensitive fields (passwords, tokens, PII) flow
+      directly into log statements or API response serialization.
+    risk_statement: >
+      Sensitive data in logs or API responses may be captured by
+      log aggregation systems or exposed to unauthorized clients.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Sensitive fields are not passed to log sinks or response serializers.
+    fail_condition: Sensitive field detected flowing to log or API response.
+    warn_condition: Field usage pattern detected; sensitivity context unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.11]
+      cwe: [CWE-532, CWE-312]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove or gate sensitive field access so it does not flow to logs or frontend responses.
+      steps:
+        - Identify the sensitive field and confirm it is classified with a privacy tag.
+        - Remove the field from log calls and API response structs.
+        - Add a test that confirms the field is absent from log output and API responses.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
+
+  - id: ETR-DESIGN-007
+    version: "2026.01"
+    title: Debug, profiling, and admin endpoints must not be exposed by default
+    family: ETR-DESIGN
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure debug, profiling (pprof), and admin endpoints are not registered
+      or exposed without explicit authorization controls.
+    risk_statement: >
+      Exposed debug and profiling endpoints leak runtime internals and may
+      allow denial of service or information disclosure.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Debug and profiling endpoints are behind auth or not registered.
+    fail_condition: Unprotected debug or pprof endpoint registered.
+    warn_condition: Debug endpoint detected; protection status unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: [CWE-489]
+      owasp: [A05:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Gate debug and profiling endpoints behind an explicit feature flag or build tag.
+      steps:
+        - Wrap pprof and debug handler registration in an `if debug` or build-tag block.
+        - Confirm the endpoints are not reachable in production builds.
+        - Add a test that confirms the endpoints return 404 when the flag is off.
+      references:
+        - https://pkg.go.dev/net/http/pprof
+
+  - id: ETR-DESIGN-008
+    version: "2026.01"
+    title: Security-sensitive packages must not depend on feature or UI layers
+    family: ETR-DESIGN
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure security-sensitive packages (auth, crypto, policy) do not import
+      from feature or UI layers.
+    risk_statement: >
+      Security packages depending on feature or UI layers create circular
+      dependencies and may pull in untrusted or attacker-controlled code.
+    applies_to:
+      stacks: [go, node]
+      files: ["**/auth/**", "**/crypto/**", "**/policy/**"]
+    tools:
+      primary: [go]
+      secondary: [semgrep]
+    pass_condition: Security packages have no imports from feature or UI layers.
+    fail_condition: Security package imports feature or UI layer package.
+    warn_condition: Import direction detected; sensitivity context unclear.
+    evidence:
+      raw: [raw/go-list.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove the import of a feature or UI package from a security-sensitive package.
+      steps:
+        - Identify the dependency that violates the security isolation boundary.
+        - Extract the shared logic into a utility package that neither side owns.
+        - Update the security package to depend only on core or infrastructure packages.
+      references:
+        - https://pkg.go.dev/golang.org/x/tools/go/packages
+
+  - id: ETR-DESIGN-009
+    version: "2026.01"
+    title: API contracts must declare auth for protected endpoints
+    family: ETR-DESIGN
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure protected endpoints in OpenAPI/Swagger contracts declare
+      authentication and authorization requirements.
+    risk_statement: >
+      API contracts without declared auth requirements may result in
+      implementations that omit access controls.
+    applies_to:
+      stacks: [all]
+      files: ["openapi.yaml", "openapi.yml", "swagger.yaml", "swagger.json"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Protected paths in API contract declare security schemes.
+    fail_condition: Protected path in API contract has no security declaration.
+    warn_condition: API contract present but path protection status unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Declare authentication requirements for all protected API contract endpoints.
+      steps:
+        - Add a `security:` field to each protected path in the OpenAPI contract.
+        - Review paths matching common protected patterns (user, admin, account, etc.).
+        - Verify the implementation enforces the declared scheme.
+      references:
+        - https://swagger.io/docs/specification/authentication/
+
+  - id: ETR-DESIGN-010
+    version: "2026.01"
+    title: Design exceptions must be documented and time-bound
+    family: ETR-DESIGN
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure design-level exceptions are formally documented with
+      justification, owner, and expiry.
+    risk_statement: >
+      Undocumented design exceptions may persist indefinitely, permanently
+      weakening the architectural security posture.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: All active design exceptions have expiry dates and approvers.
+    fail_condition: Design exception without expiry date or approver detected.
+    warn_condition: ""
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.8]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add justification and an expiry date to the design exception.
+      steps:
+        - Add a time-bound exception entry to .elytrus/exceptions/accepted-risks.json.
+        - Include reason, risk_owner, approver, and expires_at fields.
+        - Schedule a review before the expiry date.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Risk_Assessment_Cheat_Sheet.html

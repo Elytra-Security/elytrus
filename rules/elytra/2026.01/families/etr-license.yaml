@@ -1,0 +1,187 @@
+rules:
+  - id: ETR-LICENSE-001
+    version: "2026.01"
+    title: Dependencies must not use banned licenses
+    family: ETR-LICENSE
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure no dependency uses a license from the configured banned list.
+    risk_statement: >
+      Banned licenses (AGPL, GPL) may create license contamination requiring
+      disclosure of proprietary source code.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["go.mod", "requirements.txt", "package.json"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: No dependency uses a license from the configured banned list.
+    fail_condition: Dependency with banned license detected.
+    warn_condition: License detection inconclusive.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Replace or remove the dependency that uses a banned license.
+      steps:
+        - Identify the dependency with the banned license from the evidence.
+        - Find an alternative library with a compatible license.
+        - Remove or replace the dependency and run `go mod tidy`.
+      references:
+        - https://opensource.org/licenses
+
+  - id: ETR-LICENSE-002
+    version: "2026.01"
+    title: Unknown dependency licenses require review
+    family: ETR-LICENSE
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure dependencies with unknown or undetected licenses are reviewed
+      before use in release artifacts.
+    risk_statement: >
+      Dependencies with unknown licenses may carry license obligations that
+      create legal risk.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["go.mod", "requirements.txt", "package.json"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: All dependencies have identified licenses.
+    fail_condition: Unknown license dependency detected in release mode.
+    warn_condition: Unknown license dependency detected in strict mode.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Identify the license for the dependency and update the license checker.
+      steps:
+        - Run `go-licenses csv ./...` and investigate the Unknown entries.
+        - Check the dependency's repository for a LICENSE file.
+        - Add a manual license override in .licenses.yaml if the tool cannot detect it.
+      references:
+        - https://github.com/google/go-licenses
+
+  - id: ETR-LICENSE-003
+    version: "2026.01"
+    title: Release artifacts must include required notices where applicable
+    family: ETR-LICENSE
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure release artifacts include required attribution and license
+      notices for dependencies that mandate them.
+    risk_statement: >
+      Missing required license notices violate attribution obligations,
+      creating legal exposure.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: NOTICES or LICENSE file present in release artifact.
+    fail_condition: Required license notices absent from release artifact.
+    warn_condition: Notice file presence cannot be confirmed.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a NOTICE file to the release artifact bundle.
+      steps:
+        - Generate a NOTICE file with `go-licenses report ./... > NOTICE`.
+        - Include the NOTICE file in the release bundle alongside the binary.
+        - Verify the NOTICE references all dependencies with attribution requirements.
+      references:
+        - https://www.apache.org/licenses/LICENSE-2.0#redistribution
+
+  - id: ETR-LICENSE-004
+    version: "2026.01"
+    title: New dependencies with review-required licenses must be approved
+    family: ETR-LICENSE
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure dependencies using licenses from the review-required list
+      are explicitly approved before use.
+    risk_statement: >
+      Dependencies with licenses requiring review (LGPL, unknown) may
+      introduce unanticipated legal obligations.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["go.mod", "requirements.txt", "package.json"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Review-required license dependencies have recorded approval.
+    fail_condition: New review-required license dependency without approval detected.
+    warn_condition: Review-required license detected; approval status unclear.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Obtain legal approval for the dependency with a review-required license.
+      steps:
+        - Identify the dependency from the evidence and review its license terms.
+        - Submit the dependency for legal review and document the approval.
+        - Add an approved exception entry if legal review passes.
+      references:
+        - https://opensource.org/licenses

@@ -1,0 +1,184 @@
+rules:
+  - id: ETR-REQ-001
+    version: "2026.01"
+    title: Protected branch changes must reference a requirement or change record
+    family: ETR-REQ
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure changes to protected branches reference a requirement ID,
+      issue, or change record for traceability.
+    risk_statement: >
+      Changes without requirement traceability cannot be audited or justified
+      in regulated environments.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Commit or PR references a requirement or change record.
+    fail_condition: Change to protected branch with no requirement reference.
+    warn_condition: Requirement reference format cannot be validated.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.8.32]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Link code changes to requirements or tickets for traceability.
+      steps:
+        - Add a ticket or issue reference to the commit message or PR description.
+        - Confirm the requirement is marked as implemented in the tracking system.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html
+
+  - id: ETR-REQ-002
+    version: "2026.01"
+    title: Acceptance criteria must be documented where policy requires it
+    family: ETR-REQ
+    severity: low
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: warn
+    objective: >
+      Ensure acceptance criteria are documented for changes where required
+      by the configured policy.
+    risk_statement: >
+      Changes without acceptance criteria may be deployed before all intended
+      requirements are met.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Acceptance criteria documented in change record.
+    fail_condition: ""
+    warn_condition: Change record found without acceptance criteria.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.8.32]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure security requirements are documented before implementation begins.
+      steps:
+        - Add security acceptance criteria to the ticket before starting implementation.
+        - Include authentication, authorisation, and data validation requirements explicitly.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Abuse_Case_Cheat_Sheet.html
+
+  - id: ETR-REQ-003
+    version: "2026.01"
+    title: Security-sensitive changes must declare security impact
+    family: ETR-REQ
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure security-sensitive changes include an explicit security impact
+      statement in the change record or PR description.
+    risk_statement: >
+      Security-sensitive changes without impact assessment may introduce
+      undocumented security risks.
+    applies_to:
+      stacks: [all]
+      files: ["**/auth/**", "**/crypto/**", "**/security/**"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Security-sensitive change includes security impact declaration.
+    fail_condition: ""
+    warn_condition: Security-sensitive change detected without impact statement.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.8.32]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add acceptance tests that verify each stated security requirement.
+      steps:
+        - Write a test for each security acceptance criterion in the ticket.
+        - Confirm all tests pass before marking the requirement as done.
+      references:
+        - https://pkg.go.dev/testing
+
+  - id: ETR-REQ-004
+    version: "2026.01"
+    title: Privacy-sensitive changes must declare privacy impact
+    family: ETR-REQ
+    severity: medium
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure changes affecting personal data processing declare a privacy
+      impact assessment.
+    risk_statement: >
+      Privacy-sensitive changes without impact assessment may violate data
+      protection regulations.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Privacy-sensitive change includes privacy impact declaration.
+    fail_condition: ""
+    warn_condition: Privacy-sensitive change detected without impact statement.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.12]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Document any deviations from stated requirements with a justification.
+      steps:
+        - Record the deviation in the PR description or a decision log.
+        - Get explicit approval from the requirements owner before merging.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Risk_Assessment_Cheat_Sheet.html

@@ -1,0 +1,276 @@
+rules:
+  - id: ETR-MIGRATION-001
+    version: "2026.01"
+    title: Tenant-owned tables must include tenant scope
+    family: ETR-MIGRATION
+    severity: critical
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure new database migration files creating tenant-owned tables
+      include tenant scope columns.
+    risk_statement: >
+      Tables without tenant scope columns cannot enforce data isolation
+      in multi-tenant deployments.
+    applies_to:
+      stacks: [all]
+      files: ["**/migrations/**/*.sql", "**/db/migrations/**/*.sql"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: New tenant-owned tables include configured tenant scope fields.
+    fail_condition: CREATE TABLE without tenant scope field in multi-tenant repo.
+    warn_condition: Table created; tenant scope pattern unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add an explicit migration plan document before starting the migration.
+      steps:
+        - Document the migration steps, rollback plan, and acceptance criteria.
+        - Get the plan reviewed by at least one other engineer before proceeding.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html
+
+  - id: ETR-MIGRATION-002
+    version: "2026.01"
+    title: New personal-data columns must be classified
+    family: ETR-MIGRATION
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure new database columns containing personal data are classified
+      in the privacy configuration.
+    risk_statement: >
+      Unclassified personal data columns may be processed without appropriate
+      controls, creating regulatory violations.
+    applies_to:
+      stacks: [all]
+      files: ["**/migrations/**/*.sql"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Personal data column names are present in privacy classification.
+    fail_condition: New personal data column without privacy classification.
+    warn_condition: Column name matches personal data pattern; classification unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.5.12]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure database migrations are reversible and tested against a staging environment.
+      steps:
+        - Add a corresponding down migration for each up migration.
+        - Run the migration on a staging environment before applying it to production.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html
+
+  - id: ETR-MIGRATION-003
+    version: "2026.01"
+    title: Destructive migrations require explicit approval
+    family: ETR-MIGRATION
+    severity: critical
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure destructive migration operations (DROP TABLE, DROP COLUMN,
+      TRUNCATE) have explicit approval evidence.
+    risk_statement: >
+      Destructive migrations can cause irreversible data loss if applied
+      incorrectly or without testing.
+    applies_to:
+      stacks: [all]
+      files: ["**/migrations/**/*.sql"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Destructive migration has corresponding exception or approval.
+    fail_condition: Destructive migration without exception or approval detected.
+    warn_condition: Destructive operation detected; approval status unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Gate destructive schema changes (DROP, TRUNCATE) behind an explicit approval step.
+      steps:
+        - Flag any migration containing DROP or TRUNCATE for peer review before merging.
+        - Take a verified backup before applying the migration to production.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html
+
+  - id: ETR-MIGRATION-004
+    version: "2026.01"
+    title: Rollback must exist for production-impacting migrations where supported
+    family: ETR-MIGRATION
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure each production-impacting migration has a corresponding
+      rollback migration.
+    risk_statement: >
+      Migrations without rollback capability prevent recovery from failed
+      deployments.
+    applies_to:
+      stacks: [all]
+      files: ["**/migrations/**/*.sql"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: Each migration has a corresponding down/rollback file.
+    fail_condition: Migration without rollback file detected.
+    warn_condition: Rollback file presence cannot be verified.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure migrations do not expose sensitive data during the transition period.
+      steps:
+        - Avoid copying unmasked sensitive columns into new tables during migration.
+        - Apply masking or encryption before the new table is made accessible.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html
+
+  - id: ETR-MIGRATION-005
+    version: "2026.01"
+    title: DELETE and UPDATE statements without WHERE must be blocked unless approved
+    family: ETR-MIGRATION
+    severity: critical
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect DELETE and UPDATE statements without WHERE clauses in migration
+      files that would affect all rows in a table.
+    risk_statement: >
+      Unqualified DELETE or UPDATE in migrations causes bulk data loss
+      or corruption that may be unrecoverable.
+    applies_to:
+      stacks: [all]
+      files: ["**/migrations/**/*.sql"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: No unqualified DELETE or UPDATE statements in migrations.
+    fail_condition: DELETE or UPDATE without WHERE clause detected in migration.
+    warn_condition: ""
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.9]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Test the migration rollback procedure in staging before production.
+      steps:
+        - Apply the migration then immediately run the rollback in staging.
+        - Confirm the database state is identical before and after the round trip.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html
+
+  - id: ETR-MIGRATION-006
+    version: "2026.01"
+    title: Schema changes affecting access control require security review
+    family: ETR-MIGRATION
+    severity: high
+    status: experimental
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure schema changes that modify access control tables or permission
+      columns trigger a security review.
+    risk_statement: >
+      Access control schema changes without review may inadvertently
+      weaken permissions or enable privilege escalation.
+    applies_to:
+      stacks: [all]
+      files: ["**/migrations/**/*.sql"]
+    tools:
+      primary: [semgrep]
+      secondary: []
+    pass_condition: Access control schema changes have security review evidence.
+    fail_condition: ""
+    warn_condition: Access control schema change detected; review status unclear.
+    evidence:
+      raw: [raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Log the start, end, and outcome of each migration run for auditability.
+      steps:
+        - Add structured log entries at the start and end of each migration.
+        - Include the migration version, operator, and outcome (success/failure).
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html

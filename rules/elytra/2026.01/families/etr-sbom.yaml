@@ -1,0 +1,143 @@
+rules:
+  - id: ETR-SBOM-001
+    version: "2026.01"
+    title: SBOM must be generated
+    family: ETR-SBOM
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure a Software Bill of Materials is generated for the repository
+      in CycloneDX format.
+    risk_statement: >
+      Without an SBOM, the software composition is unknown, making it
+      impossible to assess supply-chain risk or respond to new vulnerabilities.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: [syft]
+      secondary: [trivy]
+    technical_checks:
+      - syft . -o cyclonedx-json
+    pass_condition: sbom/cyclonedx.json is generated successfully.
+    fail_condition: SBOM generation fails or produces empty output.
+    warn_condition: SBOM tool not installed; skipping.
+    evidence:
+      raw: []
+      normalized: [sbom/cyclonedx.json, sbom/sbom-summary.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.8, A.5.19]
+      cwe: []
+      owasp: [A06:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Generate an SBOM for the repository.
+      steps:
+        - Install syft from https://github.com/anchore/syft/releases.
+        - Run `syft . -o spdx-json > sbom.spdx.json` in the repository root.
+        - Commit sbom.spdx.json or attach it to the release.
+      references:
+        - https://anchore.com/sbom/
+
+  - id: ETR-SBOM-002
+    version: "2026.01"
+    title: SBOM must be traceable to commit and tool versions
+    family: ETR-SBOM
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure the SBOM records the commit hash and tool version used to
+      generate it.
+    risk_statement: >
+      An SBOM without traceability to a specific commit and tool version
+      cannot be used as reliable evidence for audits.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: [syft]
+      secondary: []
+    pass_condition: SBOM includes generator metadata with tool version and commit.
+    fail_condition: SBOM lacks generator metadata.
+    warn_condition: Generator metadata present but incomplete.
+    evidence:
+      raw: []
+      normalized: [sbom/cyclonedx.json, sbom/sbom-summary.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.5.19]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Ensure the SBOM includes the generating tool version and commit hash.
+      steps:
+        - Regenerate the SBOM with `syft . -o spdx-json` which includes tool metadata.
+        - Confirm the SBOM spdxVersion, created, and toolVersion fields are populated.
+      references:
+        - https://spdx.dev/
+
+  - id: ETR-SBOM-003
+    version: "2026.01"
+    title: SBOM must be used for vulnerability review where supported
+    family: ETR-SBOM
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure the generated SBOM is passed to a vulnerability scanner to
+      identify vulnerable components.
+    risk_statement: >
+      Generating an SBOM without using it for vulnerability analysis provides
+      no security value.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: [trivy, syft]
+      secondary: []
+    technical_checks:
+      - trivy sbom sbom/cyclonedx.json
+    pass_condition: SBOM is scanned for vulnerabilities and results are recorded.
+    fail_condition: SBOM was generated but not scanned.
+    warn_condition: Vulnerability scanner not available; manual review required.
+    evidence:
+      raw: [raw/trivy-sbom.json]
+      normalized: [sbom/sbom-summary.json, findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: [A.8.8]
+      cwe: []
+      owasp: [A06:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Use the SBOM as input to the vulnerability scanner for comprehensive coverage.
+      steps:
+        - Run `trivy sbom sbom.spdx.json` to scan the SBOM for vulnerabilities.
+        - Compare results with the govulncheck output to identify gaps.
+      references:
+        - https://aquasecurity.github.io/trivy/latest/docs/target/sbom/

@@ -1,0 +1,57 @@
+pack:
+  name: elytrus-default
+  version: "2026.01"
+  schema_version: "2026.01"
+  min_engine_version: "2026.01"
+  max_engine_version: ""
+  status: stable
+  license: "CC-BY-SA-4.0"
+  generated_at: "2026-01-01T00:00:00Z"
+
+rules:
+  count: 140
+  families:
+    - ETR-BUILD
+    - ETR-QUALITY
+    - ETR-TEST
+    - ETR-VULN
+    - ETR-SECCODE
+    - ETR-SECRETS
+    - ETR-SBOM
+    - ETR-DEPS
+    - ETR-STACK
+    - ETR-CONFIG
+    - ETR-CICD
+    - ETR-AUTH
+    - ETR-TENANT
+    - ETR-DESIGN
+    - ETR-INTEGRITY
+    - ETR-PRIVACY
+    - ETR-DATA
+    - ETR-LOG
+    - ETR-API
+    - ETR-LICENSE
+    - ETR-RELEASE
+    - ETR-EVID
+    - ETR-EXCEPT
+    - ETR-GOV
+    - ETR-DOCS
+
+experimental_families:
+  - ETR-REQ
+  - ETR-MIGRATION
+  - ETR-THREAT
+  - ETR-REVIEW
+  - ETR-PROVENANCE
+  - ETR-OBSERVE
+  - ETR-RESILIENCE
+
+compatibility:
+  engine:
+    min: "2026.01"
+    tested:
+      - "2026.01"
+
+integrity:
+  manifest_hash: "sha256:placeholder"
+  rules_hash: "sha256:placeholder"

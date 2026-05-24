@@ -1,0 +1,239 @@
+rules:
+  - id: ETR-TEST-001
+    version: "2026.01"
+    title: Changed security-sensitive packages must include tests
+    family: ETR-TEST
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure changes to security-sensitive packages include corresponding tests.
+    risk_statement: >
+      Untested security-sensitive code increases risk of introducing
+      exploitable regressions.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/auth/**", "**/tenant/**", "**/crypto/**", "**/policy/**"]
+    tools:
+      primary: [go]
+      secondary: [pytest]
+    pass_condition: >
+      Security-sensitive packages have corresponding test files with at least
+      one test case.
+    fail_condition: >
+      Security-sensitive packages were modified but contain no test files.
+    warn_condition: Test coverage below configured threshold.
+    evidence:
+      raw: [raw/go-test-cover.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.25]
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add test files covering the security-sensitive code paths.
+      steps:
+        - Create a _test.go (Go) or .test.js (Node) file in the package.
+        - Cover both happy path and rejection/denial cases.
+        - For auth code include tests for unauthenticated and unauthorised requests.
+      references:
+        - https://pkg.go.dev/testing
+
+  - id: ETR-TEST-002
+    version: "2026.01"
+    title: Bug fixes should include regression tests
+    family: ETR-TEST
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure bug fixes include regression tests to prevent recurrence.
+    risk_statement: >
+      Bug fixes without regression tests are likely to regress in future changes.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*"]
+    tools:
+      primary: [go]
+      secondary: [pytest]
+    pass_condition: Bug fix commits include at least one new test case.
+    fail_condition: Bug fix commits contain no new test files.
+    warn_condition: Test presence cannot be confirmed automatically.
+    evidence:
+      raw: [raw/go-test.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add a regression test that reproduces the bug being fixed.
+      steps:
+        - Write a test that fails on the buggy code and passes after the fix.
+        - Name the test after the issue or PR for traceability.
+        - Commit the test together with the fix.
+      references:
+        - https://pkg.go.dev/testing
+
+  - id: ETR-TEST-003
+    version: "2026.01"
+    title: Coverage must not drop below configured threshold
+    family: ETR-TEST
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure test coverage does not fall below the configured minimum threshold.
+    risk_statement: >
+      Declining test coverage indicates increasing areas of untested code,
+      raising the risk of undetected defects.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*"]
+    tools:
+      primary: [go]
+      secondary: [pytest]
+    technical_checks:
+      - go test -cover ./...
+    pass_condition: Coverage meets or exceeds configured minimum_total threshold.
+    fail_condition: Coverage falls below configured minimum_total threshold.
+    warn_condition: Coverage is within 5% of threshold.
+    evidence:
+      raw: [raw/go-test-cover.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Improve test coverage to meet or exceed the configured threshold.
+      steps:
+        - Run `go test -coverprofile=cov.out ./...` and review the output.
+        - Add tests for uncovered branches and edge cases.
+        - Check that critical security paths have explicit test assertions.
+      references:
+        - https://pkg.go.dev/testing
+
+  - id: ETR-TEST-004
+    version: "2026.01"
+    title: Authorization and tenant isolation code must include negative tests
+    family: ETR-TEST
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure authorization and tenant isolation logic includes negative test cases
+      that verify rejection of unauthorized access.
+    risk_statement: >
+      Missing negative tests for authorization may allow access control bugs
+      to go undetected.
+    applies_to:
+      stacks: [go, node]
+      files: ["**/auth/**", "**/tenant/**", "**/permission/**"]
+    tools:
+      primary: [go]
+      secondary: [pytest]
+    pass_condition: >
+      Authorization and tenant isolation packages contain tests that assert
+      rejection of unauthorized requests.
+    fail_condition: >
+      Authorization packages have no test cases asserting denial or rejection.
+    warn_condition: Negative test detection is heuristic; manual review recommended.
+    evidence:
+      raw: [raw/go-test.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3]
+      cwe: [CWE-284]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add negative tests for authorisation and tenant isolation logic.
+      steps:
+        - Write tests that assert unauthorised callers receive a rejection response.
+        - Write tests that confirm a tenant cannot access another tenant's data.
+        - "Include boundary checks: empty token, expired token, wrong tenant ID."
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Testing_Automation_Cheat_Sheet.html
+
+  - id: ETR-TEST-005
+    version: "2026.01"
+    title: Public API changes should include API tests
+    family: ETR-TEST
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: warn
+      release: fail
+    objective: >
+      Ensure changes to public API handlers or routes include corresponding
+      API-level tests.
+    risk_statement: >
+      API changes without tests may introduce breaking changes or security
+      regressions that are not detected until production.
+    applies_to:
+      stacks: [go, node]
+      files: ["**/api/**", "**/handler/**", "**/route/**"]
+    tools:
+      primary: [go]
+      secondary: [pytest]
+    pass_condition: API handler packages include test files with route-level tests.
+    fail_condition: API handler changes have no corresponding test files.
+    warn_condition: API test detection is heuristic; manual review recommended.
+    evidence:
+      raw: [raw/go-test.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add API-level tests covering the changed public API endpoints.
+      steps:
+        - Write integration or contract tests for each modified endpoint.
+        - Include tests for success, error, and edge-case inputs.
+        - Run the tests against a live or containerised instance of the service.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html

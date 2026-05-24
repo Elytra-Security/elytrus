@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify rules
+        run: |
+          # Download latest elytrus binary to validate rules
+          curl -sSfL https://raw.githubusercontent.com/Elytra-Security/elytrus/main/install.sh | sh || true
+          if command -v elytrus &>/dev/null; then
+            elytrus rules validate --rules rules/elytra/
+          fi
+
+      - name: Create release archive of rules
+        run: |
+          tar czf rules-${{ github.ref_name }}.tar.gz rules/
+          sha256sum rules-${{ github.ref_name }}.tar.gz >> checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            elytrus-linux-amd64
+            elytrus-linux-arm64
+            elytrus-darwin-amd64
+            elytrus-darwin-arm64
+            elytrus-windows-amd64.exe
+            rules-${{ github.ref_name }}.tar.gz
+            checksums.txt
+          generate_release_notes: true

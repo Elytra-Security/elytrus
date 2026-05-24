@@ -1,0 +1,231 @@
+rules:
+  - id: ETR-BUILD-001
+    version: "2026.01"
+    title: Repository must be detectable
+    family: ETR-BUILD
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure the repository contains recognizable stack artifacts so that
+      Elytrus can apply appropriate assurance checks.
+    risk_statement: >
+      A repository that cannot be detected may bypass all assurance checks,
+      resulting in unreviewed code reaching production.
+    applies_to:
+      stacks: [all]
+      files: ["**/*"]
+    tools:
+      primary: []
+      secondary: []
+    pass_condition: At least one supported stack is detected.
+    fail_condition: No supported stack is detected in the repository.
+    warn_condition: Stack detected but with partial confidence.
+    evidence:
+      raw: []
+      normalized: [findings.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+    remediation:
+      summary: Ensure the repository contains a recognised stack artifact so Elytrus can detect the stack.
+      steps:
+        - Add a go.mod, package.json, requirements.txt, or Dockerfile at the repository root.
+        - Run `git status` to confirm the file is tracked.
+      references:
+        - https://go.dev/ref/mod#go-mod-files
+
+  - id: ETR-BUILD-002
+    version: "2026.01"
+    title: Go code must resolve and compile
+    family: ETR-BUILD
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: fail
+      strict: fail
+      release: fail
+    objective: >
+      Ensure that Go source code compiles without errors.
+    risk_statement: >
+      Uncompilable code cannot be shipped and indicates a broken development
+      workflow or incomplete merge.
+    applies_to:
+      stacks: [go]
+      files: ["**/*.go"]
+    tools:
+      primary: [go]
+      secondary: []
+    technical_checks:
+      - go build ./...
+    pass_condition: go build ./... exits 0.
+    fail_condition: go build ./... exits non-zero or produces errors.
+    warn_condition: Build succeeds with deprecation warnings.
+    evidence:
+      raw: [raw/go-build.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: false
+      requirements: []
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+    remediation:
+      summary: Fix compilation errors shown in the evidence.
+      steps:
+        - Run `go build ./...` locally and fix each error.
+        - Ensure all imports are resolvable and go.mod is up to date.
+        - Run `go mod tidy` to clean up missing or unused dependencies.
+      references:
+        - https://pkg.go.dev/cmd/go#hdr-Compile_packages_and_dependencies
+
+  - id: ETR-BUILD-003
+    version: "2026.01"
+    title: Go tests must pass
+    family: ETR-BUILD
+    severity: high
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure Go test suite passes successfully.
+    risk_statement: >
+      Failing tests indicate defects or regressions that may impact security
+      or reliability in production.
+    applies_to:
+      stacks: [go]
+      files: ["**/*_test.go"]
+    tools:
+      primary: [go]
+      secondary: []
+    technical_checks:
+      - go test ./...
+    pass_condition: go test ./... exits 0.
+    fail_condition: go test ./... exits non-zero or has test failures.
+    warn_condition: Tests pass but with race conditions detected.
+    evidence:
+      raw: [raw/go-test.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+    remediation:
+      summary: Fix the failing Go tests identified in the evidence.
+      steps:
+        - Run `go test ./...` locally to reproduce failures.
+        - Fix the underlying code or test logic causing the failure.
+        - Run `go test -race ./...` to check for race conditions.
+      references:
+        - https://pkg.go.dev/testing
+
+  - id: ETR-BUILD-004
+    version: "2026.01"
+    title: Python tests must run when configured
+    family: ETR-BUILD
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure Python test suite executes successfully when pytest is available.
+    risk_statement: >
+      Untested Python code increases the risk of defects in production.
+    applies_to:
+      stacks: [python]
+      files: ["**/*.py"]
+    tools:
+      primary: [pytest]
+      secondary: [python]
+    technical_checks:
+      - pytest
+    pass_condition: pytest exits 0.
+    fail_condition: pytest exits non-zero or has test failures.
+    warn_condition: pytest is not installed; tests skipped.
+    evidence:
+      raw: [raw/pytest.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+    remediation:
+      summary: Fix the failing Python tests or install pytest so tests can run.
+      steps:
+        - Run `pip install pytest` if pytest is not installed.
+        - Run `pytest` locally and fix each failing test.
+        - Add tests for any untested code paths.
+      references:
+        - https://docs.pytest.org/
+
+  - id: ETR-BUILD-005
+    version: "2026.01"
+    title: Node/React tests must run when configured
+    family: ETR-BUILD
+    severity: medium
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Ensure Node or React test suite executes successfully when available.
+    risk_statement: >
+      Untested Node/React code increases the risk of defects in production.
+    applies_to:
+      stacks: [node, react]
+      files: ["**/*.{js,ts,jsx,tsx}"]
+    tools:
+      primary: [npm]
+      secondary: [node, pnpm, yarn]
+    technical_checks:
+      - npm test
+    pass_condition: npm test exits 0.
+    fail_condition: npm test exits non-zero or has test failures.
+    warn_condition: Test runner not configured in package.json.
+    evidence:
+      raw: [raw/npm-test.txt]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: []
+      cwe: []
+      owasp: []
+    implementation:
+      status: planned
+    remediation:
+      summary: Fix the failing Node/React tests or configure a test runner in package.json.
+      steps:
+        - Add a `scripts.test` entry to package.json if missing.
+        - Run `npm test` locally and fix each failing test.
+        - Add tests for any untested code paths.
+      references:
+        - https://jestjs.io/docs/getting-started

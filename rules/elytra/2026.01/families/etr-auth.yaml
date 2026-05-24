@@ -1,0 +1,94 @@
+rules:
+  - id: ETR-AUTH-001
+    version: "2026.01"
+    title: Authorization checks must not be bypassed
+    family: ETR-AUTH
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect patterns that bypass or short-circuit authorization checks
+      in request handlers and middleware.
+    risk_statement: >
+      Bypassed authorization checks allow attackers to access protected
+      resources, administrative functions, or other users' data.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/auth/**", "**/handler/**", "**/middleware/**"]
+    tools:
+      primary: [gosec, semgrep]
+      secondary: [bandit]
+    pass_condition: No authorization bypass patterns detected.
+    fail_condition: Authorization check bypass or hardcoded allow pattern detected.
+    warn_condition: Conditional authorization detected; review recommended.
+    evidence:
+      raw: [raw/gosec.json, raw/semgrep.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.3, A.9.4]
+      cwe: [CWE-284, CWE-285]
+      owasp: [A01:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Add or correct the authorisation check that is being bypassed.
+      steps:
+        - Identify the code path that skips the authorisation check.
+        - Add a call to the approved auth middleware or authorisation function.
+        - Write a test that confirms unauthorised callers receive a 401 or 403 response.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
+
+  - id: ETR-AUTH-002
+    version: "2026.01"
+    title: Authentication secrets must not be hardcoded
+    family: ETR-AUTH
+    severity: critical
+    status: stable
+    default_outcome_mode:
+      local: warn
+      strict: fail
+      release: fail
+    objective: >
+      Detect hardcoded authentication secrets such as JWT signing keys,
+      session secrets, and password hashes in source code.
+    risk_statement: >
+      Hardcoded authentication secrets can be extracted from source code
+      or binary, allowing attackers to forge tokens or sessions.
+    applies_to:
+      stacks: [go, python, node]
+      files: ["**/*.{go,py,js,ts}"]
+    tools:
+      primary: [gosec, gitleaks, semgrep]
+      secondary: []
+    pass_condition: No hardcoded authentication secrets detected.
+    fail_condition: Hardcoded auth secret (JWT key, session secret, password) detected.
+    warn_condition: Literal secret-like value detected; context unclear.
+    evidence:
+      raw: [raw/gosec.json, raw/gitleaks.json]
+      normalized: [findings.json]
+    exception:
+      allowed: true
+      requirements: [finding_id, reason, risk_owner, approver, expires_at, compensating_control]
+    mappings:
+      iso27001: [A.8.13, A.9.4]
+      cwe: [CWE-798]
+      owasp: [A02:2021]
+    implementation:
+      status: planned
+
+    remediation:
+      summary: Remove the hardcoded authentication secret and use a secrets manager.
+      steps:
+        - Remove the hardcoded secret from the source file immediately.
+        - Rotate the credential because the existing one must be considered compromised.
+        - Load the secret from an environment variable or a secrets manager at runtime.
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html
