@@ -1,6 +1,10 @@
 <div align="center">
 
-# Elytrus
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/elytrus-horizontal-mono-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/elytrus-horizontal-mono-light.svg">
+  <img alt="Elytrus" src="assets/elytrus-horizontal-mono-light.svg" width="320">
+</picture>
 
 **Assurance before software moves forward.**
 

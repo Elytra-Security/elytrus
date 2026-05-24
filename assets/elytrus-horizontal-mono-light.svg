@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" width="760" height="200">
+  <title>Elytrus — horizontal lockup</title>
+  <g transform="translate(22 22) scale(1.56)">
+    <path d="M 28 10 L 12 10 L 12 90 L 28 90" fill="none" stroke="#C97B3F" stroke-width="11" stroke-linecap="square" stroke-linejoin="miter"/>
+    <path d="M 72 10 L 88 10 L 88 90 L 72 90" fill="none" stroke="#C97B3F" stroke-width="11" stroke-linecap="square" stroke-linejoin="miter"/>
+    <polyline points="38,38 50,50 38,62" fill="none" stroke="#C97B3F" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/>
+    <line x1="56" y1="62" x2="68" y2="62" stroke="#C97B3F" stroke-width="7" stroke-linecap="square"/>
+  </g>
+  <text x="206" y="129.4" font-family="'JetBrains Mono', ui-monospace, monospace" font-weight="500" font-size="84" fill="#11151B" letter-spacing="-3">elytrus</text>
+</svg>
