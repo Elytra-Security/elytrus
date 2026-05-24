@@ -9,7 +9,7 @@
 [![SARIF](https://img.shields.io/badge/output-SARIF%202.1.0-orange)](docs/github-actions-example.yml)
 [![ISO 27001](https://img.shields.io/badge/evidence-ISO%2027001%3A2022-blue)](docs/)
 
-Elytrus is a free, local-first secure software assurance gate. It runs from the root of a repository, detects the software stack, executes deterministic quality, security, privacy, supply-chain, configuration, design, and release-readiness checks, then produces an evidence bundle and attestation before software moves forward.
+Elytrus is a free, local-first secure software assurance gate. It runs from the root of a repository, detects the software stack, executes deterministic quality, security, privacy, supply-chain, configuration, design, and release-readiness checks, then produces a signed evidence bundle and attestation before software moves forward.
 
 **One command. Local evidence. Clear gate decision.**
 
@@ -19,22 +19,37 @@ Elytrus is a free, local-first secure software assurance gate. It runs from the 
 
 ## What Elytrus Does
 
-Elytrus is not another scanner. It orchestrates industry-standard tools, applies a versioned rules pack, normalises findings into a unified schema, and produces a tamper-evident evidence bundle that auditors can verify.
+Elytrus is not another scanner. It orchestrates industry-standard tools, applies a versioned rules pack, normalises findings into a unified schema, and produces a signed, tamper-evident evidence bundle that auditors can verify.
 
 ```
 elytrus gate --strict
 ```
 
 ```
-Run ID:   2026-05-24T080646Z-4ef606
-Evidence: .elytrus/runs/2026-05-24T080646Z-4ef606
+Run ID:   2026-05-24T104231Z-ad764f
+Evidence: .elytrus/runs/2026-05-24T104231Z-ad764f
 Stacks:   Go, Node.js, migrations, scripts
 
-PASS (critical=0 high=0 medium=12 low=3 info=2)
+PASS (critical=0 high=96 medium=70 low=0 info=3)
+```
+
+```
+elytrus attest --verify
+
+Attestation verification
+────────────────────────────────────────
+Run:         2026-05-24T104231Z-ad764f
+Commit:      07773ef
+Result:      PASS
+Signed at:   2026-05-24T10:43:13Z
+Public key:  SHA256:lo/y0LghTtTcFwSiBCrpDOR3IzaweHMOlLJTaOiYIWM=
+
+✓ attestation.json               signature valid
+✓ evidence-hashes.json           signature valid
 ```
 
 Every run produces:
-- `attestation.json` — machine-readable gate result with commit identity, policy hash, and finding counts
+- `attestation.json` — machine-readable gate result with commit identity, policy hash, finding counts, and Ed25519 signature
 - `findings.json` — normalised findings with evidence, ISO 27001 mappings, and remediation guidance
 - `report.md` — human-readable report with How-to-fix for every finding
 - `report.sarif` — SARIF 2.1.0 output for GitHub Security tab integration
@@ -45,34 +60,29 @@ Every run produces:
 
 ## Installation
 
-### One-line install (Linux and macOS)
+Download the tarball for your platform from [Releases](https://github.com/Elytra-Security/elytrus/releases/latest), verify the checksum, and install:
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/Elytra-Security/elytrus/main/install.sh | sh
+# Download
+curl -OL https://github.com/Elytra-Security/elytrus/releases/latest/download/elytrus-linux-amd64.tar.gz
+curl -OL https://github.com/Elytra-Security/elytrus/releases/latest/download/checksums.txt
+
+# Verify
+sha256sum -c checksums.txt --ignore-missing
+
+# Install
+tar xzf elytrus-linux-amd64.tar.gz
+cd elytrus-linux-amd64/
+./install.sh
 ```
 
-### Manual install
-
-Download the binary for your platform from [Releases](https://github.com/Elytra-Security/elytrus/releases/latest):
-
-| Platform       | Binary                        |
-|----------------|-------------------------------|
-| Linux x86-64   | `elytrus-linux-amd64`         |
-| Linux arm64    | `elytrus-linux-arm64`         |
-| macOS x86-64   | `elytrus-darwin-amd64`        |
-| macOS arm64    | `elytrus-darwin-arm64`        |
-| Windows x86-64 | `elytrus-windows-amd64.exe`   |
-
-Verify the checksum:
-```bash
-sha256sum -c checksums.txt
-```
-
-Move to your PATH:
-```bash
-sudo mv elytrus-linux-amd64 /usr/local/bin/elytrus
-sudo chmod +x /usr/local/bin/elytrus
-```
+| Platform       | Tarball                              |
+|----------------|--------------------------------------|
+| Linux x86-64   | `elytrus-linux-amd64.tar.gz`         |
+| Linux arm64    | `elytrus-linux-arm64.tar.gz`         |
+| macOS x86-64   | `elytrus-darwin-amd64.tar.gz`        |
+| macOS arm64    | `elytrus-darwin-arm64.tar.gz`        |
+| Windows x86-64 | `elytrus-windows-amd64.tar.gz`       |
 
 ### Required tools
 
@@ -98,15 +108,10 @@ elytrus doctor
 ## Quick Start
 
 ```bash
-# Initialise Elytrus in your repository
 cd your-project
 elytrus init
-
-# Run the assurance gate
 elytrus gate --strict
-
-# View the report
-cat .elytrus/runs/$(ls -t .elytrus/runs/ | head -1)/report.md
+elytrus attest --verify
 ```
 
 ---
@@ -115,13 +120,14 @@ cat .elytrus/runs/$(ls -t .elytrus/runs/ | head -1)/report.md
 
 | Command | Description |
 |---------|-------------|
-| `elytrus init` | Initialise Elytrus, detect stacks, discover common exclude paths |
+| `elytrus init` | Initialise Elytrus, detect stacks, generate signing key, discover exclude paths |
 | `elytrus doctor` | Check required and optional tools are installed |
 | `elytrus gate` | Run checks and return pass/blocked decision |
 | `elytrus gate --strict` | Block on high findings and expired exceptions |
 | `elytrus gate --release` | Add release-readiness checks (SBOM, checksums) |
 | `elytrus inspect` | Run checks without a gate decision |
 | `elytrus attest` | Print the latest attestation |
+| `elytrus attest --verify` | Verify Ed25519 signatures on the latest evidence bundle |
 | `elytrus runs` | Show gate run history |
 | `elytrus remediation` | Compare findings between two runs |
 | `elytrus audit` | Generate an audit report for a period |
@@ -131,21 +137,21 @@ cat .elytrus/runs/$(ls -t .elytrus/runs/ | head -1)/report.md
 
 ---
 
-## Supported Stacks
+## Evidence Signing
 
-| Stack       | Checks |
-|-------------|--------|
-| **Go**      | Build, tests, go vet, gofmt, staticcheck, govulncheck, gosec, go.sum |
-| **Node.js** | npm audit, ESLint, package-lock.json integrity |
-| **Python**  | pytest, ruff, bandit, pip-audit |
-| **React**   | Component patterns, browser security |
-| **All**     | Secrets (gitleaks, trivy), SBOM (syft), vulnerabilities (trivy), semgrep, migrations, CI/CD, design, privacy, API, config, licence |
+Every evidence bundle is signed with an Ed25519 key generated on your machine during `elytrus init`. The private key never leaves your environment. The public key is committed to your repository as the trust anchor.
+
+```bash
+elytrus init        # generates .elytrus/keys/signing.key and signing.pub
+elytrus gate        # signs attestation.json and evidence-hashes.json
+elytrus attest --verify  # verifies signatures against signing.pub
+```
+
+An auditor can verify: *this evidence bundle was signed by whoever controls this repository's signing key, and the hashes match the files in the bundle.*
 
 ---
 
 ## GitHub Actions
-
-Add Elytrus to your CI pipeline in minutes. Findings appear inline on pull requests via SARIF:
 
 ```yaml
 name: Elytrus Security Gate
@@ -168,7 +174,11 @@ jobs:
 
       - name: Install Elytrus
         run: |
-          curl -sSfL https://raw.githubusercontent.com/Elytra-Security/elytrus/main/install.sh | sh
+          curl -OL https://github.com/Elytra-Security/elytrus/releases/latest/download/elytrus-linux-amd64.tar.gz
+          curl -OL https://github.com/Elytra-Security/elytrus/releases/latest/download/checksums.txt
+          sha256sum -c checksums.txt --ignore-missing
+          tar xzf elytrus-linux-amd64.tar.gz
+          cd elytrus-linux-amd64 && sudo ./install.sh
 
       - name: Run Elytrus gate
         run: elytrus gate --strict
@@ -182,7 +192,17 @@ jobs:
           category: elytrus
 ```
 
-See [docs/github-actions-example.yml](docs/github-actions-example.yml) for a complete example.
+---
+
+## Supported Stacks
+
+| Stack       | Checks |
+|-------------|--------|
+| **Go**      | Build, tests, go vet, gofmt, staticcheck, govulncheck, gosec, go.sum |
+| **Node.js** | npm audit, ESLint, package-lock.json integrity |
+| **Python**  | pytest, ruff, bandit, pip-audit |
+| **React**   | Component patterns, browser security |
+| **All**     | Secrets (gitleaks, trivy), SBOM (syft), vulnerabilities (trivy), semgrep, migrations, CI/CD, design, privacy, API, config, licence |
 
 ---
 
@@ -224,7 +244,7 @@ Community-contributed rules live in [rules/contributed](rules/contributed). See 
 
 ## ISO 27001:2022
 
-Elytrus evidence supports ISO 27001:2022 Annex A controls including A.8.25 (Secure Development Life Cycle), A.8.28 (Secure Coding), A.8.8 (Technical Vulnerability Management), A.5.34 (Privacy), and others. See the [ISO 27001 Evidence Guide](docs/) for details.
+Elytrus evidence supports ISO 27001:2022 Annex A controls including A.8.25 (Secure Development Life Cycle), A.8.28 (Secure Coding), A.8.8 (Technical Vulnerability Management), A.5.34 (Privacy), and others.
 
 ---
 
