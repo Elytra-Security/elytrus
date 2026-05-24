@@ -58,6 +58,36 @@ Every run produces:
 
 ---
 
+## Already Have Code? Start Here.
+
+Most codebases have existing findings. Elytrus handles this with **baseline mode** — establish a snapshot of where you are today, then only block on newly introduced risk going forward.
+
+```bash
+elytrus gate --strict          # see the full picture
+elytrus baseline create        # snapshot today's findings  
+elytrus gate --new-only        # from now on, block only new risk
+```
+
+Your existing findings become a managed backlog. New code cannot make things worse.
+
+```
+Baseline: .elytrus/baseline.json (169 findings, 2026-05-24)
+
+Finding states:
+  New:       0   ← these block the gate
+  Fixed:     3   ← good progress  
+  Reopened:  0   
+  Existing:  166
+
+PASS
+```
+
+Commit `.elytrus/baseline.json` so your team and CI share the same baseline.
+
+---
+
+---
+
 ## Installation
 
 Download the tarball for your platform from [Releases](https://github.com/Elytra-Security/elytrus/releases/latest), verify the checksum, and install:
@@ -125,9 +155,12 @@ elytrus attest --verify
 | `elytrus gate` | Run checks and return pass/blocked decision |
 | `elytrus gate --strict` | Block on high findings and expired exceptions |
 | `elytrus gate --release` | Add release-readiness checks (SBOM, checksums) |
+| `elytrus gate --new-only` | Block only on findings not present in the baseline |
 | `elytrus inspect` | Run checks without a gate decision |
 | `elytrus attest` | Print the latest attestation |
 | `elytrus attest --verify` | Verify Ed25519 signatures on the latest evidence bundle |
+| `elytrus baseline create` | Snapshot current findings as the baseline |
+| `elytrus baseline status` | Compare current findings against the baseline |
 | `elytrus runs` | Show gate run history |
 | `elytrus remediation` | Compare findings between two runs |
 | `elytrus audit` | Generate an audit report for a period |
