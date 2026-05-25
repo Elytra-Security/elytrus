@@ -147,8 +147,3 @@ migration:
     - org_id
   block_destructive_in_strict: true
 ```
-
-## Full Example
-
-See the [Elytra product configuration template](configuration-elytra.md)
-for a complete `.elytrus.yaml` for Go + HTMX/React/Node.js projects.
