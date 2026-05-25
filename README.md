@@ -35,6 +35,7 @@ Evidence: .elytrus/runs/2026-05-24T104231Z-ad764f
 Stacks:   Go, Node.js, migrations, scripts
 
 PASS (critical=0 high=96 medium=70 low=0 info=3)
+Evidence completeness: 100%
 ```
 
 ```
@@ -55,7 +56,8 @@ Public key:  SHA256:lo/y0LghTtTcFwSiBCrpDOR3IzaweHMOlLJTaOiYIWM=
 Every run produces:
 - `attestation.json` — machine-readable gate result with commit identity, policy hash, finding counts, and Ed25519 signature
 - `findings.json` — normalised findings with evidence, ISO 27001 mappings, and remediation guidance
-- `report.md` — human-readable report with How-to-fix for every finding
+- `report.html` — self-contained HTML report with filtering, expandable findings, and remediation steps
+- `report.md` — plain-text report with How-to-fix for every finding
 - `report.sarif` — SARIF 2.1.0 output for GitHub Security tab integration
 - `sbom/` — CycloneDX and SPDX Software Bills of Materials
 - `raw/` — unmodified tool outputs for independent verification
@@ -68,7 +70,7 @@ Most codebases have existing findings. Elytrus handles this with **baseline mode
 
 ```bash
 elytrus gate --strict          # see the full picture
-elytrus baseline create        # snapshot today's findings  
+elytrus baseline create        # snapshot today's findings
 elytrus gate --new-only        # from now on, block only new risk
 ```
 
@@ -79,16 +81,14 @@ Baseline: .elytrus/baseline.json (169 findings, 2026-05-24)
 
 Finding states:
   New:       0   ← these block the gate
-  Fixed:     3   ← good progress  
-  Reopened:  0   
+  Fixed:     3   ← good progress
+  Reopened:  0
   Existing:  166
 
 PASS
 ```
 
 Commit `.elytrus/baseline.json` so your team and CI share the same baseline.
-
----
 
 ---
 
@@ -136,6 +136,9 @@ elytrus doctor
 | `syft`        | SBOM generation                 | [anchore/syft](https://github.com/anchore/syft) |
 | `semgrep`     | Semantic code analysis          | `pip install semgrep`                      |
 | `npm`         | Node.js pack                    | [nodejs.org](https://nodejs.org)           |
+| `bandit`      | Python security analysis        | `pip install bandit`                       |
+| `ruff`        | Python linting                  | `pip install ruff`                         |
+| `pip-audit`   | Python dependency scanning      | `pip install pip-audit`                    |
 
 ---
 
@@ -168,8 +171,11 @@ elytrus attest --verify
 | `elytrus runs` | Show gate run history |
 | `elytrus remediation` | Compare findings between two runs |
 | `elytrus audit` | Generate an audit report for a period |
+| `elytrus explain <RULE-ID>` | Explain a rule — objective, risk, fix steps, ISO mapping |
 | `elytrus rules list` | List effective rules |
 | `elytrus rules validate` | Validate rules YAML against the schema |
+| `elytrus rules verify` | Verify rules pack quantum-resistant signature |
+| `elytrus rules test` | Run rule test fixtures |
 | `elytrus version` | Print version and build metadata |
 
 ---
@@ -179,12 +185,31 @@ elytrus attest --verify
 Every evidence bundle is signed with an Ed25519 key generated on your machine during `elytrus init`. The private key never leaves your environment. The public key is committed to your repository as the trust anchor.
 
 ```bash
-elytrus init        # generates .elytrus/keys/signing.key and signing.pub
-elytrus gate        # signs attestation.json and evidence-hashes.json
+elytrus init             # generates .elytrus/keys/signing.key and signing.pub
+elytrus gate             # signs attestation.json and evidence-hashes.json
 elytrus attest --verify  # verifies signatures against signing.pub
 ```
 
 An auditor can verify: *this evidence bundle was signed by whoever controls this repository's signing key, and the hashes match the files in the bundle.*
+
+## Rules Pack Signing
+
+The bundled rules pack is signed by Elytra Security using a hybrid **Ed25519 + ML-DSA (Dilithium3)** key pair — quantum-resistant by design.
+
+```bash
+elytrus rules verify
+```
+
+```
+✓ Content hash matches manifest
+✓ Ed25519 signature valid
+✓ ML-DSA (Dilithium3) signature valid
+
+This rules pack is quantum-resistant signed by Elytra Security
+and has not been modified since publication.
+```
+
+Both signatures must verify. The Elytra Security public keys are embedded in the binary.
 
 ---
 
@@ -233,19 +258,23 @@ jobs:
 
 ## Supported Stacks
 
-| Stack       | Checks |
-|-------------|--------|
-| **Go**      | Build, tests, go vet, gofmt, staticcheck, govulncheck, gosec, go.sum |
-| **Node.js** | npm audit, ESLint, package-lock.json integrity |
-| **Python**  | pytest, ruff, bandit, pip-audit |
-| **React**   | Component patterns, browser security |
-| **All**     | Secrets (gitleaks, trivy), SBOM (syft), vulnerabilities (trivy), semgrep, migrations, CI/CD, design, privacy, API, config, licence |
+Elytrus is designed to support any language where mature security tooling exists. Adding support for a new language requires a stack detector update, a pack implementation, and rules YAML — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+| Stack          | Checks |
+|----------------|--------|
+| **Go**         | Build, tests, go vet, gofmt, staticcheck, govulncheck, gosec, go.sum |
+| **Node.js**    | npm audit, ESLint, package-lock.json integrity |
+| **Python**     | pytest, ruff, bandit, pip-audit |
+| **React**      | Component patterns, browser security |
+| **Java**       | On the roadmap — trivy and semgrep coverage available today |
+| **C / C++**    | On the roadmap — semgrep and cppcheck coverage available today |
+| **All stacks** | Secrets (gitleaks, trivy), SBOM (syft), vulnerabilities (trivy), semgrep, migrations, CI/CD, design, privacy, API, config, licence |
 
 ---
 
 ## Rules
 
-Elytrus ships with **140 rules** across 25 families maintained by Elytra Security:
+Elytrus ships with **140 rules** across 25 families maintained by Elytra Security. The rules pack is quantum-resistant signed — `elytrus rules verify` confirms authenticity on every install.
 
 | Family | Rules | Description |
 |--------|-------|-------------|
@@ -281,7 +310,21 @@ Community-contributed rules live in [rules/contributed](rules/contributed). See 
 
 ## ISO 27001:2022
 
-Elytrus evidence supports ISO 27001:2022 Annex A controls including A.8.25 (Secure Development Life Cycle), A.8.28 (Secure Coding), A.8.8 (Technical Vulnerability Management), A.5.34 (Privacy), and others.
+Elytrus evidence supports ISO 27001:2022 Annex A controls including A.8.25 (Secure Development Life Cycle), A.8.28 (Secure Coding), A.8.8 (Technical Vulnerability Management), A.5.34 (Privacy), and others. Every finding is mapped to the relevant control. Every run produces an audit report (`elytrus audit`) that includes ISO 27001 control coverage, exception register, and evidence inventory.
+
+---
+
+## No AI. Deterministic. Reviewable.
+
+In an era where security tooling is increasingly embedding agentic AI, Elytrus takes a deliberate different position.
+
+- No LLM. No AI. No code leaves your machine.
+- Every gate decision is deterministic and reproducible.
+- Every finding can be traced to a specific tool output in `raw/`.
+- Every rule is a readable YAML file you can inspect and test.
+- `elytrus explain <RULE-ID>` explains any finding without calling a model.
+
+There is no question of whether a human was in the loop. There is no question of whether your source code was sent somewhere.
 
 ---
 
@@ -304,6 +347,12 @@ Elytrus runs locally. It does not send telemetry, upload source code, or call ex
 ## Contributing
 
 Contributions to the rules pack are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and [rules/AUTHORING.md](rules/AUTHORING.md).
+
+---
+
+## Open Source
+
+Elytrus will be fully open-sourced in an upcoming release. The rules pack is already public. Watch this repository for updates.
 
 ---
 
