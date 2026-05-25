@@ -64,6 +64,18 @@ Every run produces:
 
 ---
 
+## Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Handling Findings](docs/handling-findings.md) | False positives, accepted risks, baseline mode |
+| [Configuration Guide](docs/configuration.md) | Full `.elytrus.yaml` reference |
+| [Elytra Stack Config](docs/configuration-elytra.md) | Template for Go + HTMX/React/Node.js |
+| [GitHub Actions](docs/github-actions.yml) | CI workflow template |
+| [Rule Authoring](rules/AUTHORING.md) | Write and test your own rules |
+
+---
+
 ## Already Have Code? Start Here.
 
 Most codebases have existing findings. Elytrus handles this with **baseline mode** — establish a snapshot of where you are today, then only block on newly introduced risk going forward.

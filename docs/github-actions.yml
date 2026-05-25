@@ -1,0 +1,32 @@
+name: Elytrus Security Gate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  elytrus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Elytrus
+        run: |
+          curl -sSfL https://github.com/venkatmangudi-elytra/elytrus/releases/latest/download/install.sh | sh
+
+      - name: Run Elytrus gate
+        run: elytrus gate --strict
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: .elytrus/latest.sarif
+          category: elytrus
